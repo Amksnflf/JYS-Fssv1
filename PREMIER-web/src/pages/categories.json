@@ -1,0 +1,1086 @@
+{
+    "code": 0,
+    "msg": "ok",
+    "data": [
+        {
+            "id": 9,
+            "categoryKey": "account_jt",
+            "categoryName": "帳戶問題",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 10,
+            "categoryKey": "account_en",
+            "categoryName": "Account Issues",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 11,
+            "categoryKey": "account_de",
+            "categoryName": "Kontoprobleme",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 12,
+            "categoryKey": "account_ru",
+            "categoryName": "Проблемы с аккаунтом",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 13,
+            "categoryKey": "account_ar",
+            "categoryName": "مشاكل الحساب",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 14,
+            "categoryKey": "account_pt-BR",
+            "categoryName": "Problemas de conta",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 15,
+            "categoryKey": "account_fr",
+            "categoryName": "Problèmes de compte",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 16,
+            "categoryKey": "account_es",
+            "categoryName": "Problemas de cuenta",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 17,
+            "categoryKey": "account_tr",
+            "categoryName": "Hesap sorunları",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 18,
+            "categoryKey": "account_ja",
+            "categoryName": "アカウントの問題",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 19,
+            "categoryKey": "account_ko",
+            "categoryName": "계정 문제",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 20,
+            "categoryKey": "account_vi",
+            "categoryName": "Vấn đề tài khoản",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 21,
+            "categoryKey": "account_id",
+            "categoryName": "Masalah akun",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 22,
+            "categoryKey": "account_th",
+            "categoryName": "ปัญหาบัญชี",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 23,
+            "categoryKey": "security_jt",
+            "categoryName": "安全與風控",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 24,
+            "categoryKey": "security_en",
+            "categoryName": "Security & Risk Control",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 25,
+            "categoryKey": "security_de",
+            "categoryName": "Sicherheit & Risikokontrolle",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 26,
+            "categoryKey": "security_ru",
+            "categoryName": "Безопасность и контроль рисков",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 27,
+            "categoryKey": "security_ar",
+            "categoryName": "الأمان وإدارةالمخاطر",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 28,
+            "categoryKey": "security_pt-BR",
+            "categoryName": "Segurança e controle de risco",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 29,
+            "categoryKey": "security_fr",
+            "categoryName": "Sécurité et contrôle des risques",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 30,
+            "categoryKey": "security_es",
+            "categoryName": "Seguridad y control de riesgos",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 31,
+            "categoryKey": "security_tr",
+            "categoryName": "Güvenlik ve risk kontrolü",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 32,
+            "categoryKey": "security_ja",
+            "categoryName": "セキュリティとリスク管理",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 33,
+            "categoryKey": "security_ko",
+            "categoryName": "보안 및 리스크 관리",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 34,
+            "categoryKey": "security_vi",
+            "categoryName": "Bảo mật và kiểm soát rủi ro",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 35,
+            "categoryKey": "security_id",
+            "categoryName": "Keamanan & kontrol risiko",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 36,
+            "categoryKey": "security_th",
+            "categoryName": "ความปลอดภัยและการควบคุมความเสี่ยง",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 37,
+            "categoryKey": "deposit_jt",
+            "categoryName": "充值問題",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 38,
+            "categoryKey": "deposit_en",
+            "categoryName": "Deposit Issues",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 39,
+            "categoryKey": "deposit_de",
+            "categoryName": "Einzahlungsprobleme",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 40,
+            "categoryKey": "deposit_ru",
+            "categoryName": "Проблемы с пополнением",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 41,
+            "categoryKey": "deposit_ar",
+            "categoryName": "مشاكل الإيداع",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 42,
+            "categoryKey": "deposit_pt-BR",
+            "categoryName": "Problemas de depósito",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 43,
+            "categoryKey": "deposit_fr",
+            "categoryName": "Problèmes de dépôt",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 44,
+            "categoryKey": "deposit_es",
+            "categoryName": "Problemas de depósito",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 45,
+            "categoryKey": "deposit_tr",
+            "categoryName": "Para yatırma sorunları",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 46,
+            "categoryKey": "deposit_ja",
+            "categoryName": "入金の問題",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 47,
+            "categoryKey": "deposit_ko",
+            "categoryName": "입금 문제",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 48,
+            "categoryKey": "deposit_vi",
+            "categoryName": "Vấn đề nạp tiền",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 49,
+            "categoryKey": "deposit_id",
+            "categoryName": "Masalah deposit",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 50,
+            "categoryKey": "deposit_th",
+            "categoryName": "ปัญหาการฝากเงิน",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 51,
+            "categoryKey": "withdraw_jt",
+            "categoryName": "提現問題",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 52,
+            "categoryKey": "withdraw_en",
+            "categoryName": "Withdrawal Issues",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 53,
+            "categoryKey": "withdraw_de",
+            "categoryName": "Auszahlungsprobleme",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 54,
+            "categoryKey": "withdraw_ru",
+            "categoryName": "Проблемы с выводом средств",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 55,
+            "categoryKey": "withdraw_ar",
+            "categoryName": "مشاكل السحب",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 56,
+            "categoryKey": "withdraw_pt-BR",
+            "categoryName": "Problemas de saque",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 57,
+            "categoryKey": "withdraw_fr",
+            "categoryName": "Problèmes de retrait",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 58,
+            "categoryKey": "withdraw_es",
+            "categoryName": "Problemas de retiro",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 59,
+            "categoryKey": "withdraw_tr",
+            "categoryName": "Para çekme sorunları",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 60,
+            "categoryKey": "withdraw_ja",
+            "categoryName": "出金の問題",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 61,
+            "categoryKey": "withdraw_ko",
+            "categoryName": "출금 문제",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 62,
+            "categoryKey": "withdraw_vi",
+            "categoryName": "Vấn đề rút tiền",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 63,
+            "categoryKey": "withdraw_id",
+            "categoryName": "Masalah penarikan",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 64,
+            "categoryKey": "withdraw_th",
+            "categoryName": "ปัญหาการถอนเงิน",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 65,
+            "categoryKey": "kyc_jt",
+            "categoryName": "認證問題",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 66,
+            "categoryKey": "kyc_en",
+            "categoryName": "Verification Issues",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 67,
+            "categoryKey": "kyc_de",
+            "categoryName": "Verifizierungsprobleme",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 68,
+            "categoryKey": "kyc_ru",
+            "categoryName": "Проблемы с верификацией",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 69,
+            "categoryKey": "kyc_ar",
+            "categoryName": "مشاكل التحقق",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 70,
+            "categoryKey": "kyc_pt-BR",
+            "categoryName": "Problemas de verificação",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 71,
+            "categoryKey": "kyc_fr",
+            "categoryName": "Problèmes de vérification",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 72,
+            "categoryKey": "kyc_es",
+            "categoryName": "Problemas de verificación",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 73,
+            "categoryKey": "kyc_tr",
+            "categoryName": "Doğrulama sorunları",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 74,
+            "categoryKey": "kyc_ja",
+            "categoryName": "本人確認の問題",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 75,
+            "categoryKey": "kyc_ko",
+            "categoryName": "인증 문제",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 76,
+            "categoryKey": "kyc_vi",
+            "categoryName": "Vấn đề xác minh",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 77,
+            "categoryKey": "kyc_id",
+            "categoryName": "Masalah verifikasi",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 78,
+            "categoryKey": "kyc_th",
+            "categoryName": "ปัญหาการยืนยันตัวตน",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 79,
+            "categoryKey": "trade_jt",
+            "categoryName": "交易問題",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 80,
+            "categoryKey": "trade_en",
+            "categoryName": "Trading Issues",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 81,
+            "categoryKey": "trade_de",
+            "categoryName": "Handelsprobleme",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 82,
+            "categoryKey": "trade_ru",
+            "categoryName": "Проблемы с торговлей",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 83,
+            "categoryKey": "trade_ar",
+            "categoryName": "مشاكل التداول",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 84,
+            "categoryKey": "trade_pt-BR",
+            "categoryName": "Problemas de negociação",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 85,
+            "categoryKey": "trade_fr",
+            "categoryName": "Problèmes de trading",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 86,
+            "categoryKey": "trade_es",
+            "categoryName": "Problemas de trading",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 87,
+            "categoryKey": "trade_tr",
+            "categoryName": "İşlem sorunları",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 88,
+            "categoryKey": "trade_ja",
+            "categoryName": "取引の問題",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 89,
+            "categoryKey": "trade_ko",
+            "categoryName": "거래 문제",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 90,
+            "categoryKey": "trade_vi",
+            "categoryName": "Vấn đề giao dịch",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 91,
+            "categoryKey": "trade_id",
+            "categoryName": "Masalah perdagangan",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 92,
+            "categoryKey": "trade_th",
+            "categoryName": "ปัญหาการซื้อขาย",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 93,
+            "categoryKey": "product_jt",
+            "categoryName": "產品與活動",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 94,
+            "categoryKey": "product_en",
+            "categoryName": "Products & Promotions",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 95,
+            "categoryKey": "product_de",
+            "categoryName": "Produkte & Aktionen",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 96,
+            "categoryKey": "product_ru",
+            "categoryName": "Продукты и акции",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 97,
+            "categoryKey": "product_ar",
+            "categoryName": "المنتجات والعروض",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 98,
+            "categoryKey": "product_pt-BR",
+            "categoryName": "Produtos e promoções",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 99,
+            "categoryKey": "product_fr",
+            "categoryName": "Produits et promotions",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 100,
+            "categoryKey": "product_es",
+            "categoryName": "Productos y promociones",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 101,
+            "categoryKey": "product_tr",
+            "categoryName": "Ürünler ve etkinlikler",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 102,
+            "categoryKey": "product_ja",
+            "categoryName": "商品とキャンペーン",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 103,
+            "categoryKey": "product_ko",
+            "categoryName": "상품 및 이벤트",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 104,
+            "categoryKey": "product_vi",
+            "categoryName": "Sản phẩm và khuyến mãi",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 105,
+            "categoryKey": "product_id",
+            "categoryName": "Produk & promosi",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 106,
+            "categoryKey": "product_th",
+            "categoryName": "ผลิตภัณฑ์และโปรโมชัน",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 107,
+            "categoryKey": "other_jt",
+            "categoryName": "其他問題",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 108,
+            "categoryKey": "other_en",
+            "categoryName": "Other Issues",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 109,
+            "categoryKey": "other_de",
+            "categoryName": "Sonstige Probleme",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 110,
+            "categoryKey": "other_ru",
+            "categoryName": "Другие вопросы",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 111,
+            "categoryKey": "other_ar",
+            "categoryName": "مشاكل أخرى",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 112,
+            "categoryKey": "other_pt-BR",
+            "categoryName": "Outros problemas",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 113,
+            "categoryKey": "other_fr",
+            "categoryName": "Autres problèmes",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 114,
+            "categoryKey": "other_es",
+            "categoryName": "Otros problemas",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 115,
+            "categoryKey": "other_tr",
+            "categoryName": "Diğer sorunlar",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 116,
+            "categoryKey": "other_ja",
+            "categoryName": "その他の問題",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 117,
+            "categoryKey": "other_ko",
+            "categoryName": "기타 문제",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 118,
+            "categoryKey": "other_vi",
+            "categoryName": "Vấn đề khác",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 119,
+            "categoryKey": "other_id",
+            "categoryName": "Masalah lainnya",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 120,
+            "categoryKey": "other_th",
+            "categoryName": "ปัญหาอื่น ๆ",
+            "enabled": 1,
+            "sort": 0,
+            "createdAt": "2026-07-13T15:13:35",
+            "updatedAt": "2026-07-13T15:13:35"
+        },
+        {
+            "id": 1,
+            "categoryKey": "account",
+            "categoryName": "账户问题",
+            "enabled": 1,
+            "sort": 10,
+            "createdAt": "2026-06-09T08:06:00",
+            "updatedAt": "2026-06-09T08:06:00"
+        },
+        {
+            "id": 2,
+            "categoryKey": "security",
+            "categoryName": "安全与风控",
+            "enabled": 1,
+            "sort": 20,
+            "createdAt": "2026-06-09T08:06:00",
+            "updatedAt": "2026-06-09T08:06:00"
+        },
+        {
+            "id": 3,
+            "categoryKey": "deposit",
+            "categoryName": "充值问题",
+            "enabled": 1,
+            "sort": 30,
+            "createdAt": "2026-06-09T08:06:00",
+            "updatedAt": "2026-06-09T08:06:00"
+        },
+        {
+            "id": 4,
+            "categoryKey": "withdraw",
+            "categoryName": "提现问题",
+            "enabled": 1,
+            "sort": 40,
+            "createdAt": "2026-06-09T08:06:00",
+            "updatedAt": "2026-06-09T08:06:00"
+        },
+        {
+            "id": 5,
+            "categoryKey": "kyc",
+            "categoryName": "认证问题",
+            "enabled": 1,
+            "sort": 50,
+            "createdAt": "2026-06-09T08:06:00",
+            "updatedAt": "2026-06-09T08:06:00"
+        },
+        {
+            "id": 6,
+            "categoryKey": "trade",
+            "categoryName": "交易问题",
+            "enabled": 1,
+            "sort": 60,
+            "createdAt": "2026-06-09T08:06:00",
+            "updatedAt": "2026-06-09T08:06:00"
+        },
+        {
+            "id": 7,
+            "categoryKey": "product",
+            "categoryName": "产品与活动",
+            "enabled": 1,
+            "sort": 70,
+            "createdAt": "2026-06-09T08:06:00",
+            "updatedAt": "2026-06-09T08:06:00"
+        },
+        {
+            "id": 8,
+            "categoryKey": "other",
+            "categoryName": "其他问题",
+            "enabled": 1,
+            "sort": 80,
+            "createdAt": "2026-06-09T08:06:00",
+            "updatedAt": "2026-06-09T08:06:00"
+        }
+    ]
+}

@@ -1,0 +1,351 @@
+package com.asterpro.modules.asset.service;
+
+import com.asterpro.common.api.ResultCode;
+import com.asterpro.common.exception.BizException;
+import com.asterpro.modules.asset.entity.Coin;
+import com.asterpro.modules.quote.entity.Symbol;
+import com.asterpro.modules.quote.service.QuoteRouterService;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.HashSet;
+import java.util.Locale;
+import java.util.Set;
+
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class SettlementService {
+
+    private static final Set<String> USD_PEGGED = Set.of("USD", "USDT", "USDC", "DAI");
+    private static final Map<String, String> FIAT_USD_QUOTES = Map.ofEntries(
+            Map.entry("EUR", "EURUSD"),
+            Map.entry("JPY", "USDJPY"),
+            Map.entry("GBP", "GBPUSD"),
+            Map.entry("AUD", "AUDUSD"),
+            Map.entry("CNH", "USDCNH"),
+            Map.entry("CHF", "USDCHF"),
+            Map.entry("CAD", "USDCAD"),
+            Map.entry("NZD", "NZDUSD"),
+            Map.entry("HKD", "USDHKD"),
+            Map.entry("SEK", "USDSEK"),
+            Map.entry("NOK", "USDNOK"),
+            Map.entry("TRY", "USDTRY"),
+            Map.entry("MXN", "USDMXN"),
+            Map.entry("DKK", "EURDKK")
+    );
+    private static final Set<String> FIAT_CODES = new HashSet<>(Set.of(
+            "EUR", "USD", "JPY", "GBP", "AUD", "CNH", "CHF", "CAD", "NZD",
+            "HKD", "SEK", "NOK", "TRY", "MXN", "DKK"
+    ));
+
+    private final CoinService coinService;
+    private final QuoteRouterService quoteRouterService;
+
+    public String settlementCoin(Symbol symbol) {
+        if (symbol == null) {
+            return "USDT";
+        }
+        String category = normalize(symbol.getCategory());
+        if ("forex".equals(category)) {
+            return "USDT";
+        }
+        String quoteCoin = normalize(symbol.getQuoteCoin());
+        return quoteCoin == null ? "USDT" : quoteCoin;
+    }
+
+    public BigDecimal latestSettlementPrice(Symbol symbol) {
+        return latestSettlementPrice(symbol, null, new HashMap<>());
+    }
+
+    public BigDecimal latestSettlementPrice(Symbol symbol, BigDecimal latestPrice, Map<String, BigDecimal> usdPriceCache) {
+        if (symbol == null) {
+            return BigDecimal.ZERO;
+        }
+        BigDecimal resolvedLatestPrice = latestPrice != null && latestPrice.signum() > 0 ? latestPrice : null;
+        if (!"forex".equals(normalize(symbol.getCategory()))) {
+            BigDecimal price = resolvedLatestPrice != null ? resolvedLatestPrice : quoteRouterService.getLatestPrice(symbol);
+            return price == null ? BigDecimal.ZERO : price;
+        }
+        BigDecimal pairPrice = resolvedLatestPrice != null ? resolvedLatestPrice : quoteRouterService.getLatestPrice(symbol);
+        if (pairPrice == null || pairPrice.signum() <= 0) {
+            return BigDecimal.ZERO;
+        }
+        BigDecimal quoteUsd = usdPriceOf(symbol.getQuoteCoin(), usdPriceCache);
+        if (quoteUsd.signum() <= 0) {
+            return BigDecimal.ZERO;
+        }
+        return pairPrice.multiply(quoteUsd).setScale(12, RoundingMode.HALF_UP);
+    }
+
+    public BigDecimal latestDisplayPrice(Symbol symbol) {
+        if (symbol == null) {
+            return BigDecimal.ZERO;
+        }
+        BigDecimal price = quoteRouterService.getLatestPrice(symbol);
+        return price == null ? BigDecimal.ZERO : price;
+    }
+
+    public BigDecimal usdPriceOf(String coinCode) {
+        return usdPriceOf(coinCode, new HashMap<>());
+    }
+
+    public BigDecimal usdPriceOf(String coinCode, Map<String, BigDecimal> cache) {
+        return usdPriceOf(coinCode, cache, new HashSet<>());
+    }
+
+    private BigDecimal usdPriceOf(String coinCode, Map<String, BigDecimal> cache, Set<String> visiting) {
+        String normalizedCoin = normalize(coinCode);
+        if (normalizedCoin == null) {
+            return BigDecimal.ZERO;
+        }
+        if (cache != null && cache.containsKey(normalizedCoin)) {
+            return cache.get(normalizedCoin);
+        }
+        if (USD_PEGGED.contains(normalizedCoin)) {
+            if (cache != null) {
+                cache.put(normalizedCoin, BigDecimal.ONE);
+            }
+            return BigDecimal.ONE;
+        }
+        if (!visiting.add(normalizedCoin)) {
+            return BigDecimal.ZERO;
+        }
+        try {
+            Coin coin = coinService.findByCode(normalizedCoin);
+            String configuredQuote = coin == null ? null : normalize(coin.getQuoteSymbol());
+//            log.info("260813001 settlement usdPriceOf coin={} normalizedCoin={} found={} configuredQuote={}",
+//                    coinCode, normalizedCoin, coin != null, configuredQuote);
+            BigDecimal configuredPrice = usdPriceFromQuoteSymbol(normalizedCoin, configuredQuote, cache, visiting);
+            if (configuredPrice.signum() > 0) {
+//                log.info("260813001 settlement usdPriceOf configured quote success coin={} quote={} price={}",
+//                        normalizedCoin, configuredQuote, configuredPrice);
+                if (cache != null) {
+                    cache.put(normalizedCoin, configuredPrice);
+                }
+                return configuredPrice;
+            }
+
+            String fallbackQuote = explicitUsdQuoteSymbol(normalizedCoin);
+            if (!sameText(configuredQuote, fallbackQuote)) {
+                BigDecimal fallbackPrice = usdPriceFromQuoteSymbol(normalizedCoin, fallbackQuote, cache, visiting);
+                if (fallbackPrice.signum() > 0) {
+//                    log.info("260813001 settlement usdPriceOf fallback quote success coin={} quote={} price={}",
+//                            normalizedCoin, fallbackQuote, fallbackPrice);
+                    if (cache != null) {
+                        cache.put(normalizedCoin, fallbackPrice);
+                    }
+                    return fallbackPrice;
+                }
+//                log.warn("260813001 settlement usdPriceOf fallback quote unavailable coin={} quote={} price={}",
+//                        normalizedCoin, fallbackQuote, fallbackPrice);
+            }
+//            log.warn("260813001 settlement usdPriceOf failed coin={} configuredQuote={} fallbackQuote={} configuredPrice={}",
+//                    normalizedCoin, configuredQuote, fallbackQuote, configuredPrice);
+            if (cache != null) {
+                cache.put(normalizedCoin, BigDecimal.ZERO);
+            }
+            return BigDecimal.ZERO;
+        } finally {
+            visiting.remove(normalizedCoin);
+        }
+    }
+
+    private BigDecimal usdPriceFromQuoteSymbol(String coinCode, String quoteSymbol, Map<String, BigDecimal> cache, Set<String> visiting) {
+        if (quoteSymbol == null) {
+//            log.warn("260813001 settlement quote symbol missing coin={}", coinCode);
+            return BigDecimal.ZERO;
+        }
+        BigDecimal quotePrice = quoteRouterService.getLatestPrice(quoteSymbol);
+//        log.info("260813001 settlement quote price coin={} quoteSymbol={} quotePrice={}",
+//                coinCode, quoteSymbol, quotePrice);
+        if (quotePrice == null || quotePrice.signum() <= 0) {
+//            log.warn("260813001 settlement quote price unavailable coin={} quoteSymbol={} quotePrice={}",
+//                    coinCode, quoteSymbol, quotePrice);
+            return BigDecimal.ZERO;
+        }
+        BigDecimal resolved = resolveUsdFromQuoteSymbol(coinCode, quoteSymbol, quotePrice, cache, visiting);
+//        log.info("260813001 settlement quote resolved coin={} quoteSymbol={} quotePrice={} resolvedUsd={}",
+//                coinCode, quoteSymbol, quotePrice, resolved);
+        return resolved.signum() <= 0 ? BigDecimal.ZERO : resolved;
+    }
+
+    private BigDecimal resolveUsdFromQuoteSymbol(String coinCode, String quoteSymbol, BigDecimal quotePrice, Map<String, BigDecimal> cache, Set<String> visiting) {
+        String normalizedSymbol = normalizeRouteSymbol(quoteSymbol);
+//        log.info("260813001 settlement resolve quote coin={} quoteSymbol={} normalizedSymbol={} quotePrice={}",
+//                coinCode, quoteSymbol, normalizedSymbol, quotePrice);
+        if (normalizedSymbol == null) {
+//            log.warn("260813001 settlement resolve symbol invalid coin={} quoteSymbol={}", coinCode, quoteSymbol);
+            return BigDecimal.ZERO;
+        }
+        // 检查是否以USD锚定的稳定币结尾（USD、USDT、USDC、DAI等）
+        if (normalizedSymbol.startsWith(coinCode) && endsWithUsdPegged(normalizedSymbol)) {
+            return quotePrice;
+        }
+        // 检查是否以USD锚定的稳定币开头
+        if (startsWithUsdPegged(normalizedSymbol) && normalizedSymbol.endsWith(coinCode)) {
+            return BigDecimal.ONE.divide(quotePrice, 12, RoundingMode.HALF_UP);
+        }
+        if (normalizedSymbol.length() == 6) {
+            String base = normalizedSymbol.substring(0, 3);
+            String quote = normalizedSymbol.substring(3);
+            if (coinCode.equals(base)) {
+                BigDecimal quoteUsd = usdPriceOf(quote, cache, visiting);
+                if (quoteUsd.signum() > 0) {
+                    return quotePrice.multiply(quoteUsd).setScale(12, RoundingMode.HALF_UP);
+                }
+            }
+            if (coinCode.equals(quote)) {
+                BigDecimal baseUsd = usdPriceOf(base, cache, visiting);
+                if (baseUsd.signum() > 0) {
+                    return baseUsd.divide(quotePrice, 12, RoundingMode.HALF_UP);
+                }
+            }
+        }
+        return BigDecimal.ZERO;
+    }
+
+    public BigDecimal requireUsdPrice(String coinCode) {
+//        log.info("260813001 settlement requireUsdPrice start coinCode={} thread={}", coinCode, Thread.currentThread().getName());
+//        log.info("260813001 settlement requireUsdPrice before usdPriceOf coinCode={} normalizedCoin={}", coinCode, normalize(coinCode));
+//        log.info("260813001 settlement requireUsdPrice USD_PEGGED={} FIAT_CODES={}",
+//                USD_PEGGED.contains(normalize(coinCode)), FIAT_CODES.contains(normalize(coinCode)));
+        
+        BigDecimal price = null;
+        try {
+            price = usdPriceOf(coinCode);
+//            log.info("260813001 settlement requireUsdPrice after usdPriceOf coinCode={} price={} signum={} scale={} precision={}",
+//                    coinCode, price, price.signum(), price.scale(), price.precision());
+        } catch (Exception e) {
+//            log.error("260813001 settlement requireUsdPrice exception coinCode={} error={}", coinCode, e.getMessage(), e);
+            throw new BizException(ResultCode.QUOTE_UNAVAILABLE);
+        }
+        
+//        System.out.println("260813001 settlement requireUsdPrice coinCode=" + coinCode + ", price=" + price + ", signum=" + price.signum());
+//        log.info("260813001 settlement requireUsdPrice result coinCode={} price={} isZero={}",
+//                coinCode, price, price.compareTo(BigDecimal.ZERO) == 0);
+        
+        if (price.signum() <= 0) {
+//            log.warn("260813001 settlement requireUsdPrice unavailable coinCode={} price={} normalizedCoin={}",
+//                    coinCode, price, normalize(coinCode));
+            throw new BizException(ResultCode.QUOTE_UNAVAILABLE);
+        }
+        return price;
+    }
+
+    public BigDecimal convertQuoteToSettlement(Symbol symbol, BigDecimal quoteAmount) {
+        if (quoteAmount == null || quoteAmount.signum() == 0) {
+            return BigDecimal.ZERO;
+        }
+        if (symbol == null) {
+            return quoteAmount;
+        }
+        int sign = quoteAmount.signum();
+        BigDecimal absAmount = quoteAmount.abs();
+        String settlementCoin = settlementCoin(symbol);
+        String quoteCoin = normalize(symbol.getQuoteCoin());
+        if (settlementCoin.equalsIgnoreCase(defaultString(quoteCoin, settlementCoin))) {
+            return quoteAmount;
+        }
+        BigDecimal quoteUsd = requireUsdPrice(quoteCoin);
+        BigDecimal settlementUsd = requireUsdPrice(settlementCoin);
+        BigDecimal converted = absAmount.multiply(quoteUsd)
+                .divide(settlementUsd, 12, RoundingMode.HALF_UP);
+        return sign < 0 ? converted.negate() : converted;
+    }
+
+    public BigDecimal convertSettlementToQuote(Symbol symbol, BigDecimal settlementAmount) {
+        if (settlementAmount == null || settlementAmount.signum() == 0) {
+            return BigDecimal.ZERO;
+        }
+        if (symbol == null) {
+            return settlementAmount;
+        }
+        int sign = settlementAmount.signum();
+        BigDecimal absAmount = settlementAmount.abs();
+        String settlementCoin = settlementCoin(symbol);
+        String quoteCoin = normalize(symbol.getQuoteCoin());
+        if (settlementCoin.equalsIgnoreCase(defaultString(quoteCoin, settlementCoin))) {
+            return settlementAmount;
+        }
+        BigDecimal settlementUsd = requireUsdPrice(settlementCoin);
+        BigDecimal quoteUsd = requireUsdPrice(quoteCoin);
+        BigDecimal converted = absAmount.multiply(settlementUsd)
+                .divide(quoteUsd, 12, RoundingMode.HALF_UP);
+        return sign < 0 ? converted.negate() : converted;
+    }
+
+    public boolean isForex(Symbol symbol) {
+        return symbol != null && "forex".equals(normalize(symbol.getCategory()));
+    }
+
+    public boolean isFiatCoin(String coinCode) {
+        String normalizedCoin = normalize(coinCode);
+        return normalizedCoin != null && FIAT_CODES.contains(normalizedCoin);
+    }
+
+    private String explicitUsdQuoteSymbol(String coinCode) {
+        return coinCode == null ? null : FIAT_USD_QUOTES.get(coinCode);
+    }
+
+    private String normalizeRouteSymbol(String symbol) {
+        if (symbol == null) {
+            return null;
+        }
+        return symbol.trim()
+                .toUpperCase(Locale.ROOT)
+                .replace(".OTC", "")
+                .replace("-", "")
+                .replace("_", "");
+    }
+
+    private boolean sameText(String left, String right) {
+        if (left == null || left.isBlank()) {
+            return right == null || right.isBlank();
+        }
+        return left.equalsIgnoreCase(defaultString(right, ""));
+    }
+
+    private String normalize(String value) {
+        return value == null ? null : value.trim().toUpperCase(Locale.ROOT);
+    }
+
+    private String defaultString(String value, String fallback) {
+        return value == null || value.isBlank() ? fallback : value;
+    }
+
+    /**
+     * 检查交易对是否以USD锚定的稳定币结尾
+     */
+    private boolean endsWithUsdPegged(String symbol) {
+        if (symbol == null) {
+            return false;
+        }
+        for (String pegged : USD_PEGGED) {
+            if (symbol.endsWith(pegged)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * 检查交易对是否以USD锚定的稳定币开头
+     */
+    private boolean startsWithUsdPegged(String symbol) {
+        if (symbol == null) {
+            return false;
+        }
+        for (String pegged : USD_PEGGED) {
+            if (symbol.startsWith(pegged)) {
+                return true;
+            }
+        }
+        return false;
+    }
+}

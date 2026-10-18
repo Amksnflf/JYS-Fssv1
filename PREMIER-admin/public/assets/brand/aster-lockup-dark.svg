@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 540 140" role="img" aria-labelledby="asterAdminLockupDarkTitle">
+  <title id="asterAdminLockupDarkTitle">Astrelvion logo</title>
+  <defs>
+    <linearGradient id="adminLockupGold" x1="32" y1="24" x2="105" y2="112" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFF3C8" />
+      <stop offset="0.4" stop-color="#F2D487" />
+      <stop offset="1" stop-color="#C8891D" />
+    </linearGradient>
+    <linearGradient id="adminLockupBg" x1="20" y1="14" x2="115" y2="122" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#16264D" />
+      <stop offset="0.58" stop-color="#0D1832" />
+      <stop offset="1" stop-color="#050A16" />
+    </linearGradient>
+  </defs>
+  <rect x="12" y="14" width="108" height="108" rx="30" fill="url(#adminLockupBg)" />
+  <path d="M66 34 33 98h15l7-13h22l7 13h15L66 34Z" fill="url(#adminLockupGold)" />
+  <path d="M66 56 57 74h18l-9-18Z" fill="url(#adminLockupBg)" />
+  <path d="M51 77h40l-10 8H46l5-8Z" fill="#FFF2C8" />
+  <path d="m93 27 3 7.6 7.6 3-7.6 3-3 7.6-3-7.6-7.6-3 7.6-3 3-7.6Z" fill="#FFE8A8" />
+  <text x="144" y="68" dominant-baseline="middle" font-family="'Segoe UI', 'PingFang SC', sans-serif" font-size="54" font-weight="700" letter-spacing="-1.2">
+    <tspan fill="#0F172A">Astrel</tspan>
+    <tspan fill="#B7791F">vion</tspan>
+  </text>
+</svg>

@@ -1,0 +1,30 @@
+# Local metadata and nested-repository internals
+.DS_Store
+.git.saved/
+
+# Environment files and local credentials
+.env
+.env.*
+**/.env
+**/.env.*
+
+# Dependencies and generated build output
+**/node_modules/
+**/node_modules
+**/dist/
+**/dist-*/
+**/.cache/
+**/.vite/
+*.tsbuildinfo
+
+# Archives and database exports (may contain business data or secrets)
+*.zip
+*.sql
+
+# Project files known to contain plaintext credentials
+AI-work/历史文档/SETUP.md
+AI-work/历史文档/宝塔部署操作记录.md
+AI-work/历史文档/BAOTA_DEPLOY.md
+backend/src/main/resources/application.yml
+backend/src/main/resources/application-dev.yml
+backend/src/main/resources/application-prod.yml

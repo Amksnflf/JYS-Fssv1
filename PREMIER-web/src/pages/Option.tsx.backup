@@ -1,0 +1,1332 @@
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
+import { useTranslation } from 'react-i18next';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { ChevronDown } from 'lucide-react';
+import Picker from 'react-mobile-picker';
+import { fetchDepth, fetchSymbols, fetchTick, type QuoteDepth, type SymbolRow } from '@/api/quote';
+import { subscribeQuote } from '@/api/quoteWS';
+import { fetchOverview } from '@/api/asset';
+import {
+  fetchOptionHistory,
+  fetchOptionPeriods,
+  fetchRunningOptions,
+  placeOption,
+  type OptionOrder,
+  type OptionPeriod,
+} from '@/api/option';
+import { useUserStore } from '@/store/userStore';
+import { toast } from '@/components/Toast';
+import { useWalletModal } from '@/hooks/useWalletModal';
+import { EmptyState, PairCoinIcon } from '@/components/AsterUI';
+import KLineChart from './trade/KLineChart';
+import Orderbook from './trade/Orderbook';
+import PcMarketMoves from './trade/PcMarketMoves';
+import SymbolDrawer from './trade/SymbolDrawer';
+import { KLINE_PERIODS, normalizeKlinePeriodForApi } from './trade/klinePeriods';
+import { useResponsive } from '@/hooks/useResponsive';
+import { useFavoriteSymbols } from '@/hooks/useFavoriteSymbols';
+import { useMarketStore } from '@/store/marketStore';
+
+const PERCENTS = [0, 25, 50, 75, 100];
+type PcMarketTab = 'favorite' | 'spot' | 'perp' | 'option';
+const FALLBACK_PERIODS: OptionPeriod[] = [
+  { seconds: 30, payoutRate: '0.20' },
+  { seconds: 60, payoutRate: '0.30' },
+  { seconds: 120, payoutRate: '0.40' },
+  { seconds: 300, payoutRate: '0.50' },
+  { seconds: 600, payoutRate: '0.55' },
+  { seconds: 1800, payoutRate: '0.60' },
+  { seconds: 3600, payoutRate: '0.65' },
+];
+
+function fmtPayout(rate: string): string {
+  const n = Number(rate) * 100;
+  return `${n.toFixed(0)}%`;
+}
+
+function fmtSeconds(seconds: number): string {
+  if (seconds < 60) return `${seconds}s`;
+  if (seconds < 3600) return `${seconds / 60}m`;
+  return `${seconds / 3600}h`;
+}
+
+function defaultScheduleTime() {
+  const d = new Date();
+  d.setMinutes(d.getMinutes() + 1);
+  d.setSeconds(0, 0);
+  return d;
+}
+
+function formatDateTime(d: Date): string {
+  const pad = (n: number) => n.toString().padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:00`;
+}
+
+export default function OptionPage() {
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+  const { isPc } = useResponsive();
+  const [searchParams] = useSearchParams();
+  const token = useUserStore((s) => s.token);
+  const { openWalletModal } = useWalletModal();
+  const symbolParam = searchParams.get('symbol')?.toUpperCase();
+  const codeParam = searchParams.get('code');
+  const categoryParam = searchParams.get('category') || 'crypto';
+
+  const [symbols, setSymbols] = useState<SymbolRow[]>([]);
+  const [current, setCurrent] = useState<SymbolRow | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [pcMarketTab, setPcMarketTab] = useState<PcMarketTab>('option');
+  const [pcKeyword, setPcKeyword] = useState('');
+
+  const [klPeriod, setKlPeriod] = useState('1m');
+  const [chartVisible, setChartVisible] = useState(true);
+  const [livePrice, setLivePrice] = useState<string | null>(null);
+  const [change, setChange] = useState(0);
+  const [depth, setDepth] = useState<QuoteDepth | null>(null);
+
+  const [periods, setPeriods] = useState<OptionPeriod[]>([]);
+  const [pickedPeriod, setPickedPeriod] = useState<number>(60);
+  const [tradeMode, setTradeMode] = useState<'instant' | 'timed'>('timed');
+  const [direction, setDirection] = useState<1 | 2>(2);
+  const [amountInput, setAmountInput] = useState('');
+  const [percent, setPercent] = useState(0);
+  const [placing, setPlacing] = useState(false);
+  const [periodMenuOpen, setPeriodMenuOpen] = useState(false);
+  const [timePickerOpen, setTimePickerOpen] = useState(false);
+  const [scheduledAt, setScheduledAt] = useState<Date>(() => defaultScheduleTime());
+
+  const [available, setAvailable] = useState('0');
+  const [tab, setTab] = useState<'running' | 'history'>('running');
+  const [running, setRunning] = useState<OptionOrder[]>([]);
+  const [history, setHistory] = useState<OptionOrder[]>([]);
+  const [onlyCurrentSymbol, setOnlyCurrentSymbol] = useState(false);
+  const { toggleFavorite, isFavorite } = useFavoriteSymbols();
+  const getSymbols = useMarketStore((state) => state.getSymbols);
+
+  const [tick, setTick] = useState(0);
+  const timerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    getSymbols('option', categoryParam, 'active').then((d) => {
+      const nextSymbols = d ?? [];
+      setSymbols(nextSymbols);
+      const matched = nextSymbols.find(
+        (item) =>
+          item.alltickCode === codeParam ||
+          item.symbol.toUpperCase() === symbolParam ||
+          `${item.baseCoin}/${item.quoteCoin}`.toUpperCase() === symbolParam
+      );
+      setCurrent(matched ?? nextSymbols[0] ?? null);
+    });
+  }, [categoryParam, codeParam, getSymbols, symbolParam]);
+
+  useEffect(() => {
+    fetchOptionPeriods()
+      .then((rows) => {
+        const nextRows = rows?.length ? rows : FALLBACK_PERIODS;
+        setPeriods(nextRows);
+        if (nextRows.length) setPickedPeriod(nextRows[0].seconds);
+      })
+      .catch(() => {
+        setPeriods(FALLBACK_PERIODS);
+        setPickedPeriod(FALLBACK_PERIODS[0].seconds);
+      });
+  }, []);
+
+  const code = current?.alltickCode;
+  const precision = current?.pricePrecision ?? 2;
+  const baseCoin = current?.baseCoin ?? 'BTC';
+  const quoteCoin = current?.quoteCoin ?? 'USDT';
+  const settlementCoin = current?.settlementCoin ?? quoteCoin;
+
+  useEffect(() => {
+    if (!code) return;
+    setLivePrice(null);
+    const unsub = subscribeQuote([code], (tk) => {
+      if (tk.symbol !== code) return;
+      setLivePrice(tk.price);
+      setChange(Number(tk.change ?? 0));
+    });
+    fetchTick(code).then((tk) => {
+      if (tk?.price) setLivePrice(tk.price);
+      if (tk?.change !== undefined) setChange(Number(tk.change));
+    }).catch(() => undefined);
+    return () => unsub();
+  }, [code]);
+
+  useEffect(() => {
+    if (!code) return;
+    let alive = true;
+    const load = () => {
+      fetchDepth(code).then((d) => {
+        if (alive) setDepth(d);
+      }).catch(() => {
+        if (alive) setDepth(null);
+      });
+    };
+    load();
+    const timer = window.setInterval(load, 3000);
+    return () => {
+      alive = false;
+      window.clearInterval(timer);
+    };
+  }, [code]);
+
+  const refreshBalance = () => {
+    if (!token || !current) return;
+    fetchOverview()
+      .then((o) => {
+        const account = o.accounts?.find((a) => a.accountType === 2 && a.coin === (current.settlementCoin ?? current.quoteCoin));
+        setAvailable(account?.available ?? '0');
+      })
+      .catch(() => {});
+  };
+  useEffect(() => {
+    refreshBalance();
+  }, [token, current?.quoteCoin, current?.settlementCoin]);
+
+  useEffect(() => {
+    if (!token) return;
+    const reload = () =>
+      fetchRunningOptions().then((rs) => setRunning(rs ?? [])).catch(() => {});
+    reload();
+    timerRef.current = window.setInterval(() => {
+      setTick((x) => x + 1);
+      reload();
+    }, 1000);
+    return () => {
+      if (timerRef.current) window.clearInterval(timerRef.current);
+    };
+  }, [token]);
+
+  useEffect(() => {
+    if (!token || tab !== 'history') return;
+    fetchOptionHistory(1, 30)
+      .then((p) => setHistory(p?.records ?? []))
+      .catch(() => setHistory([]));
+  }, [tab, token]);
+
+  useEffect(() => {
+    if (!percent) return;
+    const n = (Number(available) * percent) / 100;
+    setAmountInput(n.toFixed(2));
+  }, [percent, available]);
+
+  const handlePlace = async (dir: 1 | 2) => {
+    if (!token) {
+      toast.error(t('auth.loginRequired'));
+      openWalletModal();
+      return;
+    }
+    if (!current) return;
+    const amt = Number(amountInput);
+    if (!amt || amt <= 0) {
+      toast.error(t('option.amount'));
+      return;
+    }
+    setDirection(dir);
+    setPlacing(true);
+    try {
+      await placeOption({
+        symbol: current.symbol,
+        direction: dir,
+        periodSeconds: pickedPeriod,
+        amount: amt,
+        scheduledAt: tradeMode === 'timed' ? formatDateTime(scheduledAt) : undefined,
+      });
+      toast.success(t('option.placeSuccess'));
+      setAmountInput('');
+      setPercent(0);
+      refreshBalance();
+      fetchRunningOptions().then((rs) => setRunning(rs ?? []));
+    } catch (e: any) {
+      toast.error(e?.message ?? 'fail');
+    } finally {
+      setPlacing(false);
+    }
+  };
+
+  const livePriceNum = useMemo(() => (livePrice ? Number(livePrice) : Number(current?.price ?? 0)), [current?.price, livePrice]);
+
+  const currentPayout = useMemo(() => {
+    return periods.find((p) => p.seconds === pickedPeriod)?.payoutRate ?? '0';
+  }, [periods, pickedPeriod]);
+  const minAmount = periods.find((p) => p.seconds === pickedPeriod)?.seconds ? 100 : 100;
+  const showKlPeriod = normalizeKlinePeriodForApi(klPeriod);
+  const pickedPeriodLabel = `${fmtSeconds(pickedPeriod)}-${fmtPayout(currentPayout)}`;
+  const pcSymbols = useMemo(() => {
+    const keyword = pcKeyword.trim().toUpperCase();
+    const rows = pcMarketTab === 'favorite' ? symbols.filter((item) => isFavorite(item.alltickCode)) : symbols;
+    if (!keyword) return rows;
+    return rows.filter((item) =>
+      item.symbol.toUpperCase().includes(keyword) ||
+      item.baseCoin.toUpperCase().includes(keyword) ||
+      item.quoteCoin.toUpperCase().includes(keyword)
+    );
+  }, [isFavorite, pcKeyword, pcMarketTab, symbols]);
+  const handleFavoriteToggle = () => {
+    if (!current?.alltickCode) return;
+    const favorited = toggleFavorite(current.alltickCode);
+    toast.success(favorited ? t('market.favoriteAdded', '已加入收藏') : t('market.favoriteRemoved', '已取消收藏')); 
+  };
+  const visibleRunning = useMemo(() => {
+    if (!onlyCurrentSymbol || !current) return running;
+    return running.filter((item) => item.symbol === current.symbol);
+  }, [current, onlyCurrentSymbol, running]);
+  const visibleHistory = useMemo(() => {
+    if (!onlyCurrentSymbol || !current) return history;
+    return history.filter((item) => item.symbol === current.symbol);
+  }, [current, history, onlyCurrentSymbol]);
+  const onPcMarketTabChange = (next: PcMarketTab) => {
+    if (next === 'spot' || next === 'perp') {
+      const params = current
+        ? new URLSearchParams({
+            symbol: current.symbol,
+            code: current.alltickCode,
+            category: current.category || categoryParam,
+          })
+        : null;
+      navigate(`${next === 'spot' ? '/trade' : '/perp'}${params ? `?${params.toString()}` : ''}`);
+      return;
+    }
+    setPcMarketTab(next);
+  };
+
+  if (isPc) {
+    return (
+      <div className="pc-trade-shell min-w-[1351px] bg-bg text-text">
+        <div className="pc-trade-header grid h-[54px] grid-cols-[220px_minmax(0,1fr)] border-b border-line bg-bg">
+          <button className="flex items-center gap-2 border-r border-line px-4 text-left" onClick={() => setDrawerOpen(true)}>
+            <PairCoinIcon
+              baseCoin={baseCoin}
+              quoteCoin={quoteCoin}
+              baseLogo={current?.baseLogo}
+              quoteLogo={current?.quoteLogo}
+              size="sm"
+            />
+            <span className="text-[16px] font-semibold leading-none">{baseCoin}/{quoteCoin}</span>
+            <span className="rounded bg-bgSection px-1.5 py-0.5 text-[10px] text-textSubPc">{t('nav.option')}</span>
+            <ChevronDown size={14} className="text-text" />
+          </button>
+          <div className="flex items-center justify-between gap-5 overflow-hidden px-4">
+            <div>
+              <div className={`num pc-price text-[20px] font-semibold leading-none ${change >= 0 ? 'pc-up-text' : 'pc-down-text'}`}>
+                {livePriceNum.toLocaleString('en-US', { maximumFractionDigits: precision })}
+              </div>
+              <div className={`mt-1 text-[11px] ${change >= 0 ? 'pc-up-text' : 'pc-down-text'}`}>
+                {change >= 0 ? '+' : ''}{change.toFixed(current?.changePrecision ?? 2)}%
+              </div>
+            </div>
+            <OptionPcTopStat label={t('option.payout')} value={fmtPayout(currentPayout)} className="pc-up-text" />
+            <OptionPcTopStat label={t('option.tradeInterval', { value: '' })} value={pickedPeriodLabel} />
+            <OptionPcTopStat label={t('option.currentBalance')} value={`${Number(available).toLocaleString('en-US')} ${settlementCoin}`} />
+            <OptionPcTopStat label={t('option.minBuy')} value={`${minAmount.toLocaleString('en-US')} ${settlementCoin}`} />
+            <button className="shrink-0 text-text" aria-label="favorite" onClick={handleFavoriteToggle}>
+              <StarIcon filled={isFavorite(current?.alltickCode)} />
+            </button>
+          </div>
+        </div>
+
+        <div className="pc-trade-main grid grid-cols-[220px_minmax(760px,1fr)_260px] border-b border-line">
+          <OptionPcMarketList
+            rows={pcSymbols}
+            current={current}
+            activeTab={pcMarketTab}
+            keyword={pcKeyword}
+            onTabChange={onPcMarketTabChange}
+            onKeywordChange={setPcKeyword}
+            onPick={setCurrent}
+          />
+
+          <section className="min-w-0 border-x border-line bg-bg">
+            <div className="flex h-9 items-center gap-4 overflow-x-auto border-b border-line px-3 text-[12px] scrollbar-none">
+              {KLINE_PERIODS.map((p) => (
+                <button
+                  key={`${p.v}-${p.labelKey}`}
+                  onClick={() => setKlPeriod(p.v)}
+                  className={`whitespace-nowrap transition ${klPeriod === p.v ? 'font-semibold text-text' : 'text-textSubPc hover:text-text'}`}
+                >
+                  {t(p.labelKey)}
+                </button>
+              ))}
+              <span className="h-3 w-px shrink-0 bg-line" />
+              <button className="font-semibold text-text">MA</button>
+              <button className="text-textSubPc">EMA</button>
+              <button className="text-textSubPc">BOLL</button>
+            </div>
+            <div className="h-[300px]">
+              {code && <KLineChart alltickCode={code} period={showKlPeriod} livePrice={livePrice} height={300} />}
+            </div>
+            <div className="flex h-9 items-center gap-5 border-t border-line px-3 text-[12px] text-textSubPc">
+              <button
+                onClick={() => setTradeMode('instant')}
+                className={tradeMode === 'instant' ? 'font-semibold text-text' : 'hover:text-text'}
+              >
+                {t('option.instantTrade')}
+              </button>
+              <button
+                onClick={() => setTradeMode('timed')}
+                className={tradeMode === 'timed' ? 'font-semibold text-text' : 'hover:text-text'}
+              >
+                {t('option.timedTrade')}
+              </button>
+              <button>{t('option.optionOrders')}</button>
+            </div>
+            <div className="border-t border-line px-3 py-3">
+              <OptionPcOrderPanel
+                tradeMode={tradeMode}
+                setTradeMode={setTradeMode}
+                direction={direction}
+                setDirection={setDirection}
+                periods={periods}
+                pickedPeriod={pickedPeriod}
+                setPickedPeriod={setPickedPeriod}
+                pickedPeriodLabel={pickedPeriodLabel}
+                timePickerOpen={timePickerOpen}
+                setTimePickerOpen={setTimePickerOpen}
+                scheduledAt={scheduledAt}
+                amountInput={amountInput}
+                setAmountInput={setAmountInput}
+                percent={percent}
+                setPercent={setPercent}
+                available={available}
+                currentPayout={currentPayout}
+                placing={placing}
+                handlePlace={handlePlace}
+                minAmount={minAmount}
+                quoteCoin={quoteCoin}
+                settlementCoin={settlementCoin}
+              />
+            </div>
+          </section>
+
+          <aside className="bg-bg">
+            <div className="flex h-9 items-center justify-between border-b border-line px-3 text-[12px]">
+              <span className="font-semibold text-text">{t('trade.orderbook')}</span>
+              <span className="text-up">{t('option.buyBook')}</span>
+            </div>
+            <div className="h-[520px] overflow-hidden px-3 py-2">
+              <div className="h-[286px] overflow-hidden">
+                <Orderbook
+                  price={livePriceNum ?? 0}
+                  precision={precision}
+                  baseCoin={baseCoin}
+                  quoteCoin={quoteCoin}
+                  depth={depth}
+                  rows={5}
+                  compact
+                  change={change}
+                  changePrecision={current?.changePrecision}
+                />
+              </div>
+              <div className="mt-3 border-t border-line pt-2">
+                <PcMarketMoves rows={pcSymbols} />
+              </div>
+            </div>
+          </aside>
+        </div>
+
+        <div className="pc-trade-bottom grid grid-cols-[220px_minmax(760px,1fr)_260px]">
+          <section className="border-r border-line px-3 py-3 text-[12px] text-textSubPc">
+            <div className="flex items-center justify-between">
+              <span>{t('option.payout')}</span>
+              <span className="pc-price text-up">{fmtPayout(currentPayout)}</span>
+            </div>
+            <div className="mt-2 flex items-center justify-between">
+              <span>{t('option.currentBalance')}</span>
+              <span className="pc-price text-text">{available} {settlementCoin}</span>
+            </div>
+          </section>
+
+          <section className="col-span-2 min-w-0 px-4 py-3">
+            <div className="flex gap-8 border-b border-line text-[13px]">
+              {(['running', 'history'] as const).map((k) => (
+                <button
+                  key={k}
+                  onClick={() => setTab(k)}
+                  className={`pb-3 ${tab === k ? 'border-b-2 border-text font-semibold text-text' : 'text-textSubPc'}`}
+                >
+                  {k === 'running' ? t('option.optionOrders') : t('finance.historyOrders')}
+                </button>
+              ))}
+              <label className="ml-auto flex items-center gap-2 pb-3 text-[12px] text-textSubPc">
+                <input
+                  type="checkbox"
+                  checked={onlyCurrentSymbol}
+                  onChange={(e) => setOnlyCurrentSymbol(e.target.checked)}
+                />
+                {t('common.currentSymbol')}
+              </label>
+            </div>
+            {tab === 'running' ? <RunningListClean key={tick} rows={visibleRunning} /> : <HistoryListClean rows={visibleHistory} />}
+          </section>
+
+        </div>
+
+        <SymbolDrawer
+          open={drawerOpen}
+          tradeType="option"
+          onClose={() => setDrawerOpen(false)}
+          onPick={(row) => {
+            setCurrent(row);
+            setDrawerOpen(false);
+          }}
+        />
+        {timePickerOpen && (
+          <TimePickerSheet
+            value={scheduledAt}
+            onCancel={() => setTimePickerOpen(false)}
+            onConfirm={(value) => {
+              setScheduledAt(value);
+              setTimePickerOpen(false);
+            }}
+          />
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="mx-auto min-h-screen max-w-md bg-bg pb-24 text-text">
+      <div className="flex h-14 items-center justify-between bg-bg px-4">
+        <button
+          className="flex items-center gap-2"
+          onClick={() => setDrawerOpen(true)}
+        >
+          <span className="text-xl font-bold leading-none">{baseCoin}/{quoteCoin}</span>
+          <span className="rounded bg-bgSoft px-1.5 py-0.5 text-xs text-textSub">{t('nav.option')}</span>
+          <ChevronDown size={18} className="text-text" />
+        </button>
+        <div className="flex items-center gap-4">
+          <button className="text-text" aria-label={t('trade.chart')} onClick={() => navigate('/trade/kline?type=option')}>
+            <ChartIcon />
+          </button>
+          <button className="text-text" aria-label="favorite" onClick={handleFavoriteToggle}>
+            <StarIcon filled={isFavorite(current?.alltickCode)} />
+          </button>
+        </div>
+      </div>
+
+      <section>
+        <div className="flex items-center justify-between px-4">
+          <div className="text-[15px] font-medium">{t('trade.chartTitle', { symbol: `${baseCoin}/${quoteCoin}` })}</div>
+          <button
+            className="flex items-center gap-0.5 text-xs text-textSub"
+            onClick={() => setChartVisible((v) => !v)}
+          >
+            {chartVisible ? t('common.hide') : t('common.show')}
+            <ChevronDown size={14} className={chartVisible ? 'rotate-180' : ''} />
+          </button>
+        </div>
+        {chartVisible && (
+          <>
+            <div className="mt-3 flex gap-5 overflow-x-auto px-4 text-sm scrollbar-none">
+            {KLINE_PERIODS.map((p) => (
+              <button
+                key={`${p.v}-${p.labelKey}`}
+                onClick={() => setKlPeriod(p.v)}
+                className={`whitespace-nowrap ${
+                  klPeriod === p.v ? 'font-bold text-text' : 'text-textSub'
+                }`}
+              >
+                {t(p.labelKey)}
+              </button>
+            ))}
+            </div>
+            <div className="mt-1 h-[220px] overflow-hidden">
+            {code && (
+              <KLineChart
+                alltickCode={code}
+                period={showKlPeriod}
+                livePrice={livePrice}
+                height={220}
+              />
+            )}
+            </div>
+          </>
+        )}
+      </section>
+
+      <div className="mt-3 grid grid-cols-[57%_43%] gap-3 px-4">
+        <section className="min-w-0">
+          <div className="mb-3 grid grid-cols-2 gap-2 text-sm font-semibold">
+            <button
+              className={`h-8 ${tradeMode === 'instant' ? 'text-text' : 'text-textSub'}`}
+              onClick={() => setTradeMode('instant')}
+            >
+              {t('option.instantTrade')}
+            </button>
+            <button
+              className={`h-8 ${tradeMode === 'timed' ? 'text-text' : 'text-textSub'}`}
+              onClick={() => setTradeMode('timed')}
+            >
+              {t('option.timedTrade')}
+            </button>
+          </div>
+
+          <div className="mb-3 grid grid-cols-2 gap-2 rounded-full bg-bgSoft p-1">
+            <button
+              onClick={() => setDirection(1)}
+              className={`h-8 rounded-full text-sm font-semibold ${
+                direction === 1 ? 'bg-up text-white' : 'text-textSub'
+              }`}
+            >
+              {t('option.up')}
+            </button>
+            <button
+              onClick={() => setDirection(2)}
+              className={`h-8 rounded-full text-sm font-semibold ${
+                direction === 2 ? 'bg-down text-white' : 'text-textSub'
+              }`}
+            >
+              {t('option.down')}
+            </button>
+          </div>
+
+          <div className="mb-1 flex justify-between text-sm">
+            <span>{t('option.currentBalance')}</span>
+            <span className="num">{Number(available).toLocaleString('en-US')} {settlementCoin}</span>
+          </div>
+          <div className="mb-1 flex justify-between text-sm">
+            <span>{t('option.minBuy')}</span>
+            <span className="num">{minAmount.toLocaleString('en-US')}</span>
+          </div>
+          <div className="mb-3 flex justify-between text-sm">
+            <span>{t('option.maxBuy')}</span>
+            <span className="num">5,000,000</span>
+          </div>
+
+          <div className="relative">
+            <button
+              className="mb-2 flex h-10 w-full items-center justify-between rounded-lg bg-bgSoft px-3 text-sm"
+              onClick={() => setPeriodMenuOpen((v) => !v)}
+            >
+              <span>{t('option.tradeInterval', { value: pickedPeriodLabel })}</span>
+              <ChevronDown size={14} className={periodMenuOpen ? 'rotate-180' : ''} />
+            </button>
+            {periodMenuOpen && (
+              <div className="absolute left-[52px] top-10 z-30 w-[132px] rounded-lg bg-bg py-2 text-center text-sm shadow-[0_4px_18px_rgba(0,0,0,0.12)]">
+                {periods.map((p) => (
+                  <button
+                    key={p.seconds}
+                    onClick={() => {
+                      setPickedPeriod(p.seconds);
+                      setPeriodMenuOpen(false);
+                    }}
+                    className="block w-full px-4 py-3 text-text"
+                  >
+                    {fmtSeconds(p.seconds)}-{fmtPayout(p.payoutRate)}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {tradeMode === 'timed' && (
+            <button
+              className="mb-2 flex h-10 w-full items-center justify-between rounded-lg bg-bgSoft px-3 text-sm"
+              onClick={() => setTimePickerOpen(true)}
+            >
+              <span>{t('option.selectTime')}</span>
+              <span className="num">
+                {scheduledAt.getHours().toString().padStart(2, '0')}:
+                {scheduledAt.getMinutes().toString().padStart(2, '0')}
+              </span>
+              <ChevronDown size={14} />
+            </button>
+          )}
+
+          <SoftField>
+            <input
+              type="number"
+              inputMode="decimal"
+              value={amountInput}
+              onChange={(e) => {
+                setAmountInput(e.target.value);
+                setPercent(0);
+              }}
+              placeholder={t('option.investAmount')}
+              className="w-full bg-transparent text-sm outline-none num placeholder:text-textSub"
+            />
+          </SoftField>
+
+          <div className="mb-4 mt-4">
+            <div className="relative mx-1 h-4">
+              <div className="absolute left-0 right-0 top-1.5 h-px bg-line" />
+              {PERCENTS.map((p) => (
+                <button
+                  key={p}
+                  onClick={() => {
+                    setPercent(p);
+                    setAmountInput(((Number(available) * p) / 100).toFixed(2));
+                  }}
+                  className={`absolute top-0 h-3 w-3 -translate-x-1/2 rounded-full border ${
+                    percent === p
+                      ? 'bg-primary text-white'
+                      : 'border-line bg-bg'
+                  }`}
+                  style={{ left: `${p}%` }}
+                  aria-label={`${p}%`}
+                >
+                </button>
+              ))}
+            </div>
+            <div className="mt-1 grid grid-cols-5 text-[11px] text-textSub">
+              {PERCENTS.map((p) => (
+                <button
+                  key={p}
+                  onClick={() => {
+                    setPercent(p);
+                    setAmountInput(((Number(available) * p) / 100).toFixed(2));
+                  }}
+                  className={p === 0 ? 'text-left text-up' : p === 100 ? 'text-right' : ''}
+                >
+                  {p === 0 ? '0' : `${p}%`}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="mb-2 rounded-lg bg-bgSoft px-3 py-2 text-xs text-textSub">
+            <div className="flex justify-between">
+              <span>{t('option.payout')}</span>
+              <span className="font-semibold text-up">{fmtPayout(currentPayout)}</span>
+            </div>
+            <div className="mt-1 flex justify-between">
+              <span>{t('option.profit')}</span>
+              <span className="font-semibold text-up">
+                +{Number(amountInput || 0) > 0 ? (Number(amountInput) * Number(currentPayout)).toFixed(2) : '0.00'} {settlementCoin}
+              </span>
+            </div>
+          </div>
+
+          <button
+            disabled={placing}
+            onClick={() => handlePlace(direction)}
+            className={`h-12 w-full rounded-full text-base font-bold text-white disabled:opacity-60 ${
+              direction === 1 ? 'bg-up' : 'bg-down'
+            }`}
+          >
+            {direction === 1 ? t('option.up') : t('option.down')}
+          </button>
+        </section>
+
+        <section className="min-w-0">
+          <div className="mb-1 text-right text-sm font-semibold text-up">{t('option.buyBook')}</div>
+          <Orderbook
+            price={livePriceNum ?? 0}
+            precision={precision}
+            baseCoin={baseCoin}
+            quoteCoin={quoteCoin}
+            depth={depth}
+            change={change}
+            changePrecision={current?.changePrecision}
+          />
+          <div className="mt-1 text-right text-sm font-semibold text-down">{t('option.sellBook')}</div>
+        </section>
+      </div>
+
+      <div className="mt-6 px-4">
+        <div className="flex gap-5 border-b border-line text-sm">
+          {(['running', 'history'] as const).map((k) => (
+            <button
+              key={k}
+              onClick={() => setTab(k)}
+              className={`pb-2 ${
+                tab === k ? 'border-b-2 border-text font-semibold text-text' : 'text-textSub'
+              }`}
+            >
+              {k === 'running' ? t('option.optionOrders') : t('finance.historyOrders')}
+            </button>
+          ))}
+        </div>
+
+        {tab === 'running' ? (
+          <RunningListClean key={tick} rows={visibleRunning} />
+        ) : (
+          <HistoryListClean rows={visibleHistory} />
+        )}
+      </div>
+
+      <SymbolDrawer
+        open={drawerOpen}
+        tradeType="option"
+        onClose={() => setDrawerOpen(false)}
+        onPick={(row) => {
+          setCurrent(row);
+          setDrawerOpen(false);
+        }}
+      />
+      {timePickerOpen && (
+        <TimePickerSheet
+          value={scheduledAt}
+          onCancel={() => setTimePickerOpen(false)}
+          onConfirm={(next) => {
+            setScheduledAt(next);
+            setTimePickerOpen(false);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+function compactOptionNumber(value: string | number | null | undefined): string {
+  const n = Number(value);
+  if (!isFinite(n)) return '--';
+  if (n >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(2)}B`;
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(2)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(2)}K`;
+  return n.toFixed(2);
+}
+
+function OptionPcTopStat({ label, value, className = '' }: { label: string; value: string; className?: string }) {
+  return (
+    <div className="min-w-[100px] text-[11px] leading-[15px]">
+      <div className="truncate text-textSubPc">{label}</div>
+      <div className={`pc-price font-semibold text-text ${className}`}>{value}</div>
+    </div>
+  );
+}
+
+function OptionPcMarketList({
+  rows,
+  current,
+  activeTab,
+  keyword,
+  onTabChange,
+  onKeywordChange,
+  onPick,
+}: {
+  rows: SymbolRow[];
+  current: SymbolRow | null;
+  activeTab: PcMarketTab;
+  keyword: string;
+  onTabChange: (tab: PcMarketTab) => void;
+  onKeywordChange: (value: string) => void;
+  onPick: (row: SymbolRow) => void;
+}) {
+  const { t } = useTranslation();
+  const tabs: Array<{ key: PcMarketTab; label: string }> = [
+    { key: 'favorite', label: t('market.cFavorite') },
+    { key: 'spot', label: t('market.cSpot') },
+    { key: 'perp', label: t('market.cPerp') },
+    { key: 'option', label: t('market.cOption') },
+  ];
+  return (
+    <aside className="pc-trade-market h-[569px] overflow-hidden bg-bg">
+      <div className="border-b border-line p-2">
+        <label className="flex h-7 items-center gap-2 rounded bg-bgSection px-2 text-[11px] text-textSubPc">
+          <span>⌕</span>
+          <input
+            value={keyword}
+            onChange={(e) => onKeywordChange(e.target.value)}
+            placeholder={t('common.search')}
+            className="h-full min-w-0 flex-1 bg-transparent text-text outline-none placeholder:text-textMute"
+          />
+        </label>
+        <div className="mt-2 flex items-center gap-4 text-[12px]">
+          {tabs.map((item) => (
+            <button
+              key={item.key}
+              onClick={() => onTabChange(item.key)}
+              className={`pb-1 ${activeTab === item.key ? 'border-b-2 border-text font-semibold text-text' : 'text-textSubPc'}`}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="h-[510px] overflow-y-auto">
+        <div className="grid grid-cols-[1fr_74px] px-3 py-2 text-[10px] text-textSubPc">
+          <span>{t('trade.symbol')}</span>
+          <span className="text-right">{t('kline.latestPrice')}</span>
+        </div>
+        {rows.map((row) => {
+          const selected = row.symbol === current?.symbol;
+          const rowChange = Number(row.change ?? 0);
+          const price = Number(row.price);
+          return (
+            <button
+              key={row.alltickCode || row.symbol}
+              type="button"
+              onClick={() => onPick(row)}
+              className={`grid h-[45px] w-full grid-cols-[1fr_78px] items-center px-3 text-left hover:bg-bgSection ${
+                selected ? 'bg-bgSection' : ''
+              }`}
+            >
+              <span className="min-w-0">
+                <span className="block truncate text-[12px] font-semibold text-text">{row.baseCoin}/{row.quoteCoin}</span>
+                <span className={rowChange >= 0 ? 'pc-up-text text-[10px]' : 'pc-down-text text-[10px]'}>
+                  {rowChange >= 0 ? '+' : ''}{rowChange.toFixed(row.changePrecision ?? 2)}%
+                </span>
+              </span>
+              <span className="text-right">
+                <span className="pc-price block text-[12px] font-semibold text-text">
+                  {isFinite(price) ? price.toLocaleString('en-US', { maximumFractionDigits: row.pricePrecision }) : '--'}
+                </span>
+                <span className="text-[10px] text-textSubPc">{compactOptionNumber(row.volume)}</span>
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </aside>
+  );
+}
+
+function OptionPcOrderPanel({
+  tradeMode,
+  setTradeMode,
+  direction,
+  setDirection,
+  periods,
+  pickedPeriod,
+  setPickedPeriod,
+  pickedPeriodLabel,
+  setTimePickerOpen,
+  scheduledAt,
+  amountInput,
+  setAmountInput,
+  percent,
+  setPercent,
+  available,
+  currentPayout,
+  placing,
+  handlePlace,
+  minAmount,
+  quoteCoin,
+  settlementCoin,
+}: {
+  tradeMode: 'instant' | 'timed';
+  setTradeMode: (value: 'instant' | 'timed') => void;
+  direction: 1 | 2;
+  setDirection: (value: 1 | 2) => void;
+  periods: OptionPeriod[];
+  pickedPeriod: number;
+  setPickedPeriod: (value: number) => void;
+  pickedPeriodLabel: string;
+  timePickerOpen: boolean;
+  setTimePickerOpen: (value: boolean) => void;
+  scheduledAt: Date;
+  amountInput: string;
+  setAmountInput: (value: string) => void;
+  percent: number;
+  setPercent: (value: number) => void;
+  available: string;
+  currentPayout: string;
+  placing: boolean;
+  handlePlace: (direction: 1 | 2) => void;
+  minAmount: number;
+  quoteCoin: string;
+  settlementCoin: string;
+}) {
+  const { t } = useTranslation();
+  const setAmountByPercent = (value: number) => {
+    setPercent(value);
+    setAmountInput(((Number(available) * value) / 100).toFixed(2));
+  };
+
+  return (
+    <div className="pc-trade-form pc-trade-form-option text-[12px]">
+      <div className="pc-trade-form-tabs mb-2 grid grid-cols-2 gap-1 rounded bg-bgSection p-1">
+        <button className={`h-7 rounded font-semibold ${tradeMode === 'instant' ? 'bg-text text-white' : 'text-textSubPc'}`} onClick={() => setTradeMode('instant')}>
+          {t('option.instantTrade')}
+        </button>
+        <button className={`h-7 rounded font-semibold ${tradeMode === 'timed' ? 'bg-text text-white' : 'text-textSubPc'}`} onClick={() => setTradeMode('timed')}>
+          {t('option.timedTrade')}
+        </button>
+      </div>
+      <div className="pc-trade-action-grid mb-2 grid grid-cols-2 gap-1">
+        <button onClick={() => setDirection(1)} className={`h-8 rounded font-semibold ${direction === 1 ? 'bg-up text-white' : 'bg-bgSection text-textSubPc'}`}>
+          {t('option.up')}
+        </button>
+        <button onClick={() => setDirection(2)} className={`h-8 rounded font-semibold ${direction === 2 ? 'bg-down text-white' : 'bg-bgSection text-textSubPc'}`}>
+          {t('option.down')}
+        </button>
+      </div>
+      <div className="mb-2 text-textSubPc">{t('option.tradeInterval', { value: pickedPeriodLabel })}</div>
+      <div className="pc-trade-period-grid mb-2 grid grid-cols-4 gap-1">
+        {periods.slice(0, 8).map((item) => (
+          <button
+            key={item.seconds}
+            onClick={() => setPickedPeriod(item.seconds)}
+            className={`h-7 rounded text-[11px] ${pickedPeriod === item.seconds ? 'bg-text text-white' : 'bg-bgSection text-textSubPc'}`}
+          >
+            {fmtSeconds(item.seconds)}
+          </button>
+        ))}
+      </div>
+      {tradeMode === 'timed' ? (
+        <button className="pc-trade-select mb-2 flex h-8 w-full items-center justify-between rounded bg-bgSection px-2" onClick={() => setTimePickerOpen(true)}>
+          <span>{t('option.selectTime')}</span>
+          <span className="num">
+            {scheduledAt.getHours().toString().padStart(2, '0')}:{scheduledAt.getMinutes().toString().padStart(2, '0')}
+          </span>
+        </button>
+      ) : null}
+      <SoftField>
+        <input
+          type="number"
+          inputMode="decimal"
+          value={amountInput}
+          onChange={(e) => {
+            setAmountInput(e.target.value);
+            setPercent(0);
+          }}
+          placeholder={t('option.investAmount')}
+          className="w-full bg-transparent text-[12px] outline-none num placeholder:text-textSubPc"
+        />
+      </SoftField>
+      <div className="pc-trade-percent mb-3 mt-3">
+        <div className="relative mx-1 h-3">
+          <div className="absolute left-0 right-0 top-1/2 h-px -translate-y-1/2 bg-line" />
+          {PERCENTS.map((item) => (
+            <button
+              key={item}
+              onClick={() => setAmountByPercent(item)}
+              className={`absolute top-0 h-3 w-3 -translate-x-1/2 rounded-full border ${percent === item ? 'border-text bg-text' : 'border-line bg-bg'}`}
+              style={{ left: `${item}%` }}
+              aria-label={`${item}%`}
+            />
+          ))}
+        </div>
+        <div className="mt-1 grid grid-cols-5 text-[10px] text-textSubPc">
+          {PERCENTS.map((item) => (
+            <button key={item} onClick={() => setAmountByPercent(item)}>{item === 0 ? '0' : `${item}%`}</button>
+          ))}
+        </div>
+      </div>
+      <div className="mb-2 flex justify-between text-textSubPc">
+        <span>{t('option.currentBalance')}</span>
+        <span className="pc-price text-text">{available} {settlementCoin}</span>
+      </div>
+      <div className="mb-2 flex justify-between text-textSubPc">
+        <span>{t('option.minBuy')}</span>
+        <span className="pc-price text-text">{minAmount} {settlementCoin}</span>
+      </div>
+      <div className="mb-3 rounded bg-bgSection px-2 py-2 text-textSubPc">
+        <div className="flex justify-between">
+          <span>{t('option.payout')}</span>
+          <span className="font-semibold text-up">{fmtPayout(currentPayout)}</span>
+        </div>
+        <div className="mt-1 flex justify-between">
+          <span>{t('option.profit')}</span>
+          <span className="font-semibold text-up">
+            +{Number(amountInput || 0) > 0 ? (Number(amountInput) * Number(currentPayout)).toFixed(2) : '0.00'} {settlementCoin}
+          </span>
+        </div>
+      </div>
+      <button
+        disabled={placing}
+        onClick={() => handlePlace(direction)}
+        className={`h-9 w-full rounded text-[13px] font-bold text-white disabled:opacity-60 ${direction === 1 ? 'bg-up' : 'bg-down'}`}
+      >
+        {direction === 1 ? t('option.up') : t('option.down')}
+      </button>
+    </div>
+  );
+}
+
+function SoftField({ children }: { children: ReactNode }) {
+  return (
+    <div className="mb-2 flex h-10 items-center rounded-lg bg-bgSoft px-3">
+      {children}
+    </div>
+  );
+}
+
+function ChartIcon() {
+  return (
+    <svg width="23" height="23" viewBox="0 0 23 23" fill="none" aria-hidden="true">
+      <path d="M7 4v15M16 4v15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <path d="M4 8h6M13 15h6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <path d="M7 8v6M16 9v6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function StarIcon({ filled }: { filled: boolean }) {
+  return (
+    <svg width="23" height="23" viewBox="0 0 23 23" fill="none" aria-hidden="true">
+      <path
+        d="m11.5 3.2 2.45 4.96 5.48.8-3.97 3.86.94 5.45-4.9-2.58-4.9 2.58.94-5.45L3.57 8.96l5.48-.8L11.5 3.2Z"
+        stroke="currentColor"
+        fill={filled ? 'currentColor' : 'none'}
+        strokeWidth="1.8"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function TimePickerSheet({
+  value,
+  onCancel,
+  onConfirm,
+}: {
+  value: Date;
+  onCancel: () => void;
+  onConfirm: (value: Date) => void;
+}) {
+  const { t } = useTranslation();
+  const [draft, setDraft] = useState(() => new Date(value));
+
+  const setPart = (part: 'year' | 'month' | 'day' | 'hour' | 'minute', next: number) => {
+    setDraft((old) => {
+      const d = new Date(old);
+      if (part === 'year') d.setFullYear(next);
+      if (part === 'month') d.setMonth(next - 1);
+      if (part === 'day') d.setDate(next);
+      if (part === 'hour') d.setHours(next);
+      if (part === 'minute') d.setMinutes(next);
+      d.setSeconds(0, 0);
+      return d;
+    });
+  };
+
+  const buildOptions = (current: number, min: number, max: number) => {
+    const size = max - min + 1;
+    return [-1, 0, 1, 2].map((offset) => {
+      const raw = current + offset;
+      if (raw < min) return max - ((min - raw - 1) % size);
+      if (raw > max) return min + ((raw - max - 1) % size);
+      return raw;
+    });
+  };
+
+  const column = (items: number[], current: number, onPick: (v: number) => void, pad = false) => (
+    <div className="flex-1 text-center">
+      {items.map((item) => (
+        <button
+          key={`${item}-${pad}`}
+          onClick={() => onPick(item)}
+          className={`block h-11 w-full text-lg num ${item === current ? 'font-semibold text-text' : 'text-text'}`}
+        >
+          {pad ? item.toString().padStart(2, '0') : item}
+        </button>
+      ))}
+    </div>
+  );
+
+  const year = draft.getFullYear();
+  const month = draft.getMonth() + 1;
+  const day = draft.getDate();
+  const hour = draft.getHours();
+  const minute = draft.getMinutes();
+  const daysInMonth = new Date(year, month, 0).getDate();
+
+  return createPortal(
+    <div className="fixed inset-0 z-[100] bg-black/65">
+      <div className="aster-bottom-sheet absolute bottom-0 left-0 right-0 mx-auto max-w-md rounded-t-xl bg-bg px-4 pb-safe pt-4 shadow-pop">
+        <div className="mb-4 flex items-center justify-between text-base">
+          <button onClick={onCancel}>{t('common.cancel')}</button>11
+          <div className="font-bold">{t('option.selectTime')}</div>
+          <button onClick={() => onConfirm(draft)}>{t('common.confirm')}</button>
+        </div>
+        <div className="relative">
+          <div className="absolute left-0 right-0 top-11 h-11 rounded-lg bg-bgSoft" />
+          <div className="relative flex gap-1">
+            {column(buildOptions(year, 2026, 2035), year, (v) => setPart('year', v))}
+            {column(buildOptions(month, 1, 12), month, (v) => setPart('month', v), true)}
+            {column(buildOptions(Math.min(day, daysInMonth), 1, daysInMonth), Math.min(day, daysInMonth), (v) => setPart('day', v), true)}
+            {column(buildOptions(hour, 0, 23), hour, (v) => setPart('hour', v), true)}
+            {column(buildOptions(minute, 0, 59), minute, (v) => setPart('minute', v), true)}
+          </div>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
+function RunningList({ rows }: { rows: OptionOrder[] }) {
+  const { t } = useTranslation();
+  if (!rows.length) {
+    return <EmptyState title={t('option.noData')} />;
+  }
+  const now = Date.now();
+  return (
+    <div className="space-y-2 py-2">
+      {rows.map((r) => {
+        const settleTs = r.settleAt ? new Date(r.settleAt).getTime() : 0;
+        const remain = settleTs > 0 ? Math.max(0, Math.ceil((settleTs - now) / 1000)) : 0;
+        const dirUp = r.direction === 1;
+        const scheduled = r.status === 2;
+        const quoteCoin = r.symbol.split('-')[1] || 'USDT';
+        return (
+          <div
+            key={r.id}
+            className="flex items-center justify-between rounded border border-line bg-bgSoft px-3 py-2 text-xs"
+          >
+            <div>
+              <div className="font-semibold">
+                {r.symbol}{' '}
+                <span className={dirUp ? 'text-up' : 'text-down'}>
+                  {dirUp ? t('option.up') : t('option.down')}
+                </span>
+              </div>
+              <div className="text-textSub">
+                {scheduled ? t('option.waitingOpen') : `${t('option.openPrice')}: ${r.openPrice ?? '--'}`} · {Number(r.amount).toFixed(2)} USDT
+              </div>
+            </div>
+            <div className="text-right">
+              <div className="font-mono text-base text-primary">
+                {scheduled ? t('option.pendingOpen') : `${remain}s`}
+              </div>
+              <div className="text-textSub">{r.periodSeconds}s · {fmtPayout(r.payoutRate)}</div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function HistoryList({ rows }: { rows: OptionOrder[] }) {
+  const { t } = useTranslation();
+  if (!rows.length) {
+    return <EmptyState title={t('option.noData')} />;
+  }
+  return (
+    <div className="space-y-2 py-2">
+      {rows.map((r) => {
+        const win = r.result === 1;
+        const draw = r.result === 3;
+        const dirUp = r.direction === 1;
+        const profitNum = Number(r.profit ?? 0);
+        const quoteCoin = r.symbol.split('-')[1] || 'USDT';
+        return (
+          <div
+            key={r.id}
+            className="flex items-center justify-between rounded border border-line bg-bgSoft px-3 py-2 text-xs"
+          >
+            <div>
+              <div className="font-semibold">
+                {r.symbol}{' '}
+                <span className={dirUp ? 'text-up' : 'text-down'}>
+                  {dirUp ? t('option.up') : t('option.down')}
+                </span>{' '}
+                <span className="text-textSub">{r.periodSeconds}s</span>
+              </div>
+              <div className="text-textSub">
+                {r.openPrice} → {r.settlePrice ?? '--'} · {Number(r.amount).toFixed(2)} USDT
+              </div>
+            </div>
+            <div className="text-right">
+              <div
+                className={`font-semibold ${
+                  win ? 'text-up' : draw ? 'text-textSub' : 'text-down'
+                }`}
+              >
+                {/* {win ? t('option.resultWin') : draw ? t('option.resultDraw') : t('option.resultLose')} */}
+                {win ? `Profit` : draw ? t('option.resultDraw') : t('option.resultLose')}
+              </div>
+              <div className={`font-mono ${profitNum >= 0 ? 'text-up' : 'text-down'}`}>
+                {profitNum >= 0 ? '+' : ''}
+                {profitNum.toFixed(2)}
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function RunningListClean({ rows }: { rows: OptionOrder[] }) {
+  const { t } = useTranslation();
+  if (!rows.length) {
+    return <EmptyState title={t('option.noData')} />;
+  }
+  const now = Date.now();
+  return (
+    <div className="space-y-2 py-2">
+      {rows.map((row) => {
+        const settleTs = row.settleAt ? new Date(row.settleAt).getTime() : 0;
+        const remain = settleTs > 0 ? Math.max(0, Math.ceil((settleTs - now) / 1000)) : 0;
+        const dirUp = row.direction === 1;
+        const scheduled = row.status === 2;
+        const quoteCoin = row.settlementCoin || 'USDT';
+        return (
+          <div
+            key={row.id}
+            className="flex items-center justify-between rounded border border-line bg-bgSoft px-3 py-2 text-xs"
+          >
+            <div>
+              <div className="font-semibold">
+                {row.symbol}{' '}
+                <span className={dirUp ? 'text-up' : 'text-down'}>
+                  {dirUp ? t('option.up') : t('option.down')}
+                </span>
+              </div>
+              <div className="text-textSub">
+                {scheduled ? t('option.waitingOpen') : `${t('option.openPrice')}: ${row.openPrice ?? '--'}`} · {Number(row.amount).toFixed(2)} {quoteCoin}
+              </div>
+            </div>
+            <div className="text-right">
+              <div className="font-mono text-base text-primary">
+                {scheduled ? t('option.pendingOpen') : `${remain}s`}
+              </div>
+              <div className="text-textSub">{row.periodSeconds}s · {fmtPayout(row.payoutRate)}</div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function HistoryListClean({ rows }: { rows: OptionOrder[] }) {
+  const { t } = useTranslation();
+  if (!rows.length) {
+    return <EmptyState title={t('option.noData')} />;
+  }
+  return (
+    <div className="space-y-2 py-2">
+      {rows.map((row) => {
+        const win = row.result === 1;
+        const draw = row.result === 3;
+        const dirUp = row.direction === 1;
+        const profitNum = Number(row.profit ?? 0);
+        const quoteCoin = row.settlementCoin || 'USDT';
+        return (
+          <div
+            key={row.id}
+            className="flex items-center justify-between rounded border border-line bg-bgSoft px-3 py-2 text-xs"
+          >
+            <div>
+              <div className="font-semibold">
+                {row.symbol}{' '}
+                <span className={dirUp ? 'text-up' : 'text-down'}>
+                  {dirUp ? t('option.up') : t('option.down')}
+                </span>{' '}
+                <span className="text-textSub">{row.periodSeconds}s</span>
+              </div>
+              <div className="text-textSub">
+                {row.openPrice} → {row.settlePrice ?? '--'} · {Number(row.amount).toFixed(2)} {quoteCoin}
+              </div>
+            </div>
+            <div className="text-right">
+              <div
+                className={`font-semibold ${
+                  win ? 'text-up' : draw ? 'text-textSub' : 'text-down'
+                }`}
+              >
+                
+                {/* {win ? t('option.resultWin') : draw ? t('option.resultDraw') : t('option.resultLose')} */}
+                {win ? `Profit` : draw ? t('option.resultDraw') : t('option.resultLose')}
+              </div>
+              <div className={`font-mono ${profitNum >= 0 ? 'text-up' : 'text-down'}`}>
+                {profitNum >= 0 ? '+' : ''}
+                {profitNum.toFixed(2)} {quoteCoin}
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
