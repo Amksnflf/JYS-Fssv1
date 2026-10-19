@@ -4,7 +4,12 @@ import { BrowserRouter } from 'react-router-dom';
 import { ConfigProvider, App as AntdApp } from 'antd';
 import zhCN from 'antd/locale/zh_CN';
 import App from './App';
+import { initAntiScan } from './utils/antiScan';
 import './styles/index.css';
+
+if (import.meta.env.PROD) {
+  initAntiScan();
+}
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
@@ -80,7 +85,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
       }}
     >
       <AntdApp>
-        <BrowserRouter basename={import.meta.env.BASE_URL === '/' ? undefined : import.meta.env.BASE_URL}>
+        <BrowserRouter basename={typeof window !== 'undefined' && /^\/admin(\/|$)/.test(window.location.pathname) ? '/admin' : undefined}>
           <App />
         </BrowserRouter>
       </AntdApp>

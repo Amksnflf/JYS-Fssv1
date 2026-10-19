@@ -2,11 +2,13 @@ import { App, Button, Form, Image, Input, Modal, Select, Space, Switch, Table, T
 import { useState } from 'react';
 import { usePage } from '@/utils/usePage';
 import http from '@/api/http';
+import { resolveImageUrl } from '@/utils/url';
 
 interface Banner {
   id?: number;
   title?: string;
   image: string;
+  imageUrl?: string;
   link?: string;
   position: string;
   lang: string;
@@ -66,7 +68,7 @@ export default function BannerListPage() {
         pagination={{ current: pageNo, pageSize, total, onChange: (p, ps) => { setPageNo(p); setPageSize(ps); } }}
         columns={[
           { title: 'ID', dataIndex: 'id', width: 70 },
-          { title: '图片', dataIndex: 'image', width: 130, render: (src) => <Image width={96} src={src} /> },
+          { title: '图片', dataIndex: 'image', width: 130, render: (src, r) => <Image width={96} src={resolveImageUrl(src || r.imageUrl)} /> },
           { title: '标题', dataIndex: 'title' },
           { title: '链接', dataIndex: 'link', ellipsis: true },
           { title: '位置', dataIndex: 'position', width: 90 },

@@ -92,38 +92,29 @@ export default function SecurityPage() {
         desc={t('security.advancedKycDesc')}
         onClick={() => nav('/profile/kyc?level=2')}
       />
-      {/* <Item title={t('security.loginPassword')} desc={t('security.loginPasswordDesc')} onClick={() => setModal('login_pwd')} /> */}
+      <Item
+        title={t('security.loginPassword')}
+        desc={t('security.loginPasswordDesc')}
+        onClick={() => setModal('login_pwd')}
+      />
       <Item
         title={t('security.emailBind')}
         badge={user.emailBound ? { text: t('security.bound'), tone: 'gray' } : { text: t('security.unbound'), tone: 'red' }}
         desc={t('security.emailBindDesc')}
         onClick={() => setModal('email')}
       />
-      {/* <Item
+      <Item
         title={t('security.payPassword')}
         badge={user.payPwdSet ? { text: t('security.set'), tone: 'gray' } : { text: t('security.unset'), tone: 'red' }}
         desc={t('security.payPasswordDesc')}
         onClick={() => setModal('pay_pwd')}
-      /> */}
-      {/* <Item
-        title={t('security.googleAuth')}
-        badge={user.googleEnabled ? { text: t('security.enabled'), tone: 'gray' } : { text: t('security.disabled'), tone: 'red' }}
-        desc={t('security.googleAuthDesc')}
-        onClick={() => setModal('google')}
-      /> */}
+      />
 
       {modal === 'login_pwd' && <LoginPwdModal close={() => setModal(null)} />}
       {modal === 'pay_pwd' && (
         <PayPwdModal close={() => setModal(null)} hasOld={user.payPwdSet} onDone={refresh} />
       )}
       {modal === 'email' && <EmailModal close={() => setModal(null)} onDone={refresh} />}
-      {modal === 'google' && (
-        <GoogleModal
-          close={() => setModal(null)}
-          enabled={user.googleEnabled}
-          onDone={refresh}
-        />
-      )}
     </div>
   );
 }
@@ -190,11 +181,11 @@ function PayPwdModal({ close, hasOld, onDone }: { close: () => void; hasOld: boo
   const [loading, setLoading] = useState(false);
 
   const submit = async () => {
-    if (!oldPwd) return toast.error(hasOld ? t('security.oldPayPwd') : t('security.loginPwdVerifyRequired'));
+    if (hasOld && !oldPwd.trim()) return toast.error(t('security.oldPayPwd'));
     if (!newPwd || !/^\d{6}$/.test(newPwd)) return toast.error(t('security.payPwdSix'));
     setLoading(true);
     try {
-      await setPayPwd({ oldPassword: oldPwd, newPassword: newPwd });
+      await setPayPwd({ oldPassword: oldPwd.trim() || undefined, newPassword: newPwd });
       toast.success(t('security.setSuccess'));
       onDone();
       close();

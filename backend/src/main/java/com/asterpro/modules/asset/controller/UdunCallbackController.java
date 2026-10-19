@@ -32,7 +32,12 @@ public class UdunCallbackController {
                               @RequestParam String nonce,
                               @RequestParam String sign,
                               @RequestParam String body) {
-        boolean signValid = UdunSignUtil.verify(body, udunConfigService.current().getSignKey(), nonce, timestamp, sign);
+        var cfg = udunConfigService.current();
+        if (!cfg.isEnabled() || StrUtil.isBlank(cfg.getSignKey()) || "1212".equals(cfg.getSignKey().trim())) {
+            log.warn("Udun callback rejected: disabled or default weak signKey");
+            return "FAIL";
+        }
+        boolean signValid = UdunSignUtil.verify(body, cfg.getSignKey(), nonce, timestamp, sign);
         JSONObject json = StrUtil.isBlank(body) ? new JSONObject() : JSON.parseObject(body);
         UdunCallbackLog logEntity = buildLog(json, body, signValid);
         callbackLogMapper.insert(logEntity);

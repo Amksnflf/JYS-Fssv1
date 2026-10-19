@@ -289,15 +289,16 @@ async function connectEvmWallet(
   const accounts = await provider.request<string[]>({ method: 'eth_requestAccounts' });
   const address = accounts?.[0];
   if (!address) throw new Error(copy.walletAddressMissing(wallet.name));
+  const submitAddress = address.toLowerCase();
 
   return {
     walletType: matched?.info?.name?.trim() || wallet.name,
     chain: wallet.chain,
-    address,
+    address: submitAddress,
     signMessage: (message: string) =>
       provider.request<string>({
         method: 'personal_sign',
-        params: [message, address],
+        params: [bytesToHex(new TextEncoder().encode(message)), address],
       }),
   };
 }

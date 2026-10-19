@@ -52,6 +52,7 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { PcContainer } from '@/components/pc';
 import { useSupportEntryNavigation } from '@/hooks/useSupportEntryNavigation';
 import { useWalletModal } from '@/hooks/useWalletModal';
+import { maskSensitiveText } from '@/utils/secureStorage';
 
 type MenuItem = {
   key: string;
@@ -113,7 +114,7 @@ export default function ProfilePage() {
   const { t } = useTranslation();
   const nav = useNavigate();
   const { isPc } = useResponsive();
-  const rawUser = useUserStore((s) => s.user);
+  const user = useUserStore((s) => s.user);
   const token = useUserStore((s) => s.token);
   const refresh = useUserStore((s) => s.refresh);
   const logout = useUserStore((s) => s.logout);
@@ -121,25 +122,17 @@ export default function ProfilePage() {
   const openSupportEntry = useSupportEntryNavigation();
   const { openWalletModal } = useWalletModal();
 
-  const isBypass = typeof window !== 'undefined' && Boolean(localStorage.getItem('bypass_auth'));
-  const user = rawUser ?? (isBypass ? {
-    uid: '883921',
-    account: 'test0430',
-    nickname: 'test0430',
-    kycLevel: 1,
-    vipLevel: 1,
-    inviteCode: '883921',
-  } as any : null);
-
   useEffect(() => {
-    if (!token && !isBypass) {
+    if (!token) {
       nav('/auth/login?redirect=%2Fprofile', { replace: true });
       return;
     }
-    if (!rawUser && token) refresh();
-  }, [isBypass, nav, refresh, token, rawUser]);
+    if (!user && token) refresh();
+  }, [nav, refresh, token, user]);
 
   if (!user) return null;
+
+  const displayName = user.nickname || maskSensitiveText(user.account) || user.uid;
 
   const onLogout = async () => {
     await logout();
@@ -163,7 +156,7 @@ export default function ProfilePage() {
                   className="h-[74px] w-[74px] shrink-0 rounded-full border-2 border-white shadow-md shadow-cyan-500/20 object-cover"
                 />
                 <div>
-                  <div className="text-[24px] font-semibold text-text">{user.nickname || user.account || 'test0430'}</div>
+                  <div className="text-[24px] font-semibold text-text">{displayName}</div>
                   <div className="mt-2 flex items-center gap-3 text-[14px] text-textSubPc">
                     UID:{user.uid}
                     <button
@@ -256,7 +249,7 @@ export default function ProfilePage() {
           </div>
           <div className="min-w-0 flex-1">
             <div className="truncate text-base font-bold text-slate-900 leading-tight">
-              {user.nickname || user.account || 'test0430'}
+              {displayName}
             </div>
             <div className="mt-1 flex items-center gap-2 text-xs text-slate-500 font-mono">
               <span>UID: {user.uid}</span>

@@ -1,4 +1,5 @@
 import http, { getToken } from './http';
+import { secureStorage } from '@/utils/secureStorage';
 
 export interface CoinInfo {
   id: number;
@@ -44,7 +45,7 @@ function currentAuthScope() {
 function readCoinListCache() {
   if (typeof window === 'undefined') return null;
   try {
-    const raw = window.localStorage.getItem(COIN_LIST_CACHE_KEY);
+    const raw = secureStorage.getItem(COIN_LIST_CACHE_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? (parsed as CoinInfo[]) : null;
@@ -57,14 +58,14 @@ function writeCoinListCache(rows: CoinInfo[]) {
   coinListCache = rows;
   if (typeof window === 'undefined') return;
   try {
-    window.localStorage.setItem(COIN_LIST_CACHE_KEY, JSON.stringify(rows));
+    secureStorage.setItem(COIN_LIST_CACHE_KEY, JSON.stringify(rows));
   } catch {}
 }
 
 function readCacheEntry<T>(key: string) {
   if (typeof window === 'undefined') return null;
   try {
-    const raw = window.localStorage.getItem(key);
+    const raw = secureStorage.getItem(key);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     if (!parsed || typeof parsed !== 'object') return null;
@@ -86,7 +87,7 @@ function writeCacheEntry<T>(key: string, value: T, scope = currentAuthScope()) {
   }
   if (typeof window === 'undefined') return entry;
   try {
-    window.localStorage.setItem(key, JSON.stringify(entry));
+    secureStorage.setItem(key, JSON.stringify(entry));
   } catch {}
   return entry;
 }

@@ -5,6 +5,7 @@ import type { ColumnsType, ColumnType } from 'antd/es/table';
 import type { UploadProps } from 'antd';
 import http from '@/api/http';
 import { usePage } from '@/utils/usePage';
+import { compressImageFile } from '@/utils/url';
 import { useAdminStore } from '@/store/adminStore';
 import { hasPermission } from '@/utils/permission';
 import AdminUserSelect from '@/components/AdminUserSelect';
@@ -302,11 +303,12 @@ function ImageUploadField({ field }: { field: FilterField }) {
   const isCircle = (field.previewShape ?? 'square') === 'circle';
 
   const handleUpload: UploadProps['customRequest'] = async (options) => {
-    const formData = new FormData();
-    formData.append('file', options.file as Blob);
-    formData.append('biz', field.uploadBiz ?? 'coin');
     setUploading(true);
     try {
+      const compressed = await compressImageFile(options.file as Blob);
+      const formData = new FormData();
+      formData.append('file', compressed);
+      formData.append('biz', field.uploadBiz ?? 'coin');
       const result = await http.post<UploadResult, UploadResult>('/admin/upload/image', formData);
       form.setFieldsValue({ [field.name]: resolveUploadedPath(result) });
       message.success(`${field.label}上传成功`);

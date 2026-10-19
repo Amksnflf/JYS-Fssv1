@@ -1,5 +1,7 @@
 package com.asterpro.modules.admin.controller;
 
+import cn.dev33.satoken.stp.StpUtil;
+import cn.hutool.core.util.StrUtil;
 import com.asterpro.common.api.R;
 import com.asterpro.common.exception.BizException;
 import com.asterpro.common.util.PasswordUtil;
@@ -50,11 +52,20 @@ public class AdminUserController {
                               @RequestParam(defaultValue = "20") int pageSize) {
         LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
         if (keyword != null && !keyword.isBlank()) {
-            wrapper.and(q -> q.like(User::getUid, keyword)
-                    .or().like(User::getAccount, keyword)
-                    .or().like(User::getEmail, keyword)
-                    .or().like(User::getPhone, keyword)
-                    .or().like(User::getNickname, keyword));
+            String kw = keyword.trim();
+            wrapper.and(q -> {
+                q.like(User::getUid, kw)
+                        .or().like(User::getAccount, kw)
+                        .or().like(User::getEmail, kw)
+                        .or().like(User::getPhone, kw)
+                        .or().like(User::getNickname, kw);
+                if (StrUtil.isNumeric(kw)) {
+                    try {
+                        q.or().eq(User::getId, Long.parseLong(kw));
+                    } catch (NumberFormatException ignored) {
+                    }
+                }
+            });
         }
         if (status != null) {
             wrapper.eq(User::getStatus, status);
@@ -197,6 +208,9 @@ public class AdminUserController {
         }
         user.setStatus(dto.getStatus());
         userMapper.updateById(user);
+        if (dto.getStatus() == 0) {
+            StpUtil.logout(id);
+        }
         logService.log(authService.currentAdminId(), "user", "set_status",
                 "user", String.valueOf(id), "status=" + dto.getStatus() + " reason=" + dto.getReason());
         return R.ok();

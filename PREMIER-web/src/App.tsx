@@ -71,9 +71,8 @@ function isAssetPath(pathname: string) {
 function RequireAuth({ children }: { children: ReactNode }) {
   const token = useUserStore((s) => s.token);
   const location = useLocation();
-  const isBypass = typeof window !== 'undefined' && Boolean(localStorage.getItem('bypass_auth'));
 
-  if (!token && !isBypass) {
+  if (!token) {
     return <Navigate to={`/auth/login?redirect=${encodeURIComponent(location.pathname + location.search)}`} replace />;
   }
 
@@ -87,9 +86,17 @@ export default function App() {
   const timerRef = useRef<number | undefined>(undefined);
   useEffect(() => {
     setUnauthorizedHandler(() => {
-      void useUserStore.getState().logout();
+      useUserStore.getState().clearAuthLocal();
       const path = window.location.pathname;
-      const isProtected = ['/assets', '/profile'].some((p) => path === p || path.startsWith(p + '/'));
+      const isProtected = [
+        '/assets',
+        '/profile',
+        '/support/ticket',
+        '/finance/lock/orders',
+        '/finance/portfolio/orders',
+        '/finance/orders',
+        '/finance/ai/orders',
+      ].some((p) => path === p || path.startsWith(p + '/'));
       if (isProtected) {
         window.location.href = `/auth/login?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`;
       }

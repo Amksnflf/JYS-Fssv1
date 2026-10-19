@@ -3,6 +3,10 @@ package com.asterpro.modules.admin.controller;
 import com.asterpro.common.api.R;
 import com.asterpro.modules.admin.service.AdminAuthService;
 import com.asterpro.modules.admin.service.AdminLogService;
+import com.asterpro.modules.asset.entity.Account;
+import com.asterpro.modules.asset.service.AccountService;
+import com.asterpro.modules.asset.service.SettlementService;
+import com.asterpro.modules.quote.entity.Symbol;
 import com.asterpro.modules.quote.service.SymbolService;
 import com.asterpro.modules.trade.flash.entity.FlashOrder;
 import com.asterpro.modules.trade.flash.mapper.FlashOrderMapper;
@@ -21,10 +25,12 @@ import com.asterpro.modules.trade.spot.entity.UserQuoteOffset;
 import com.asterpro.modules.trade.spot.mapper.SpotOrderMapper;
 import com.asterpro.modules.trade.spot.mapper.SpotTradeMapper;
 import com.asterpro.modules.trade.spot.mapper.UserQuoteOffsetMapper;
+import com.asterpro.modules.trade.spot.service.SpotTradeService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -43,7 +49,11 @@ public class AdminTradeController {
     private final FlashOrderMapper flashMapper;
     private final UserQuoteOffsetMapper offsetMapper;
     private final UserWinRateMapper winRateMapper;
+    private final SpotTradeService spotTradeService;
     private final PerpService perpService;
+    private final SymbolService symbolService;
+    private final SettlementService settlementService;
+    private final AccountService accountService;
     private final AdminAuthService authService;
     private final AdminLogService logService;
 
@@ -133,6 +143,7 @@ public class AdminTradeController {
         return R.ok(flashMapper.selectPage(com.asterpro.common.util.PageUtil.page(pageNo, pageSize), w));
     }
 
+    @Transactional
     @PostMapping("/spot/{id}/cancel")
     public R<Void> cancelSpot(@PathVariable Long id, @RequestBody(required = false) InterventionDTO dto) {
         requireReason(dto == null ? null : dto.getReason());
@@ -141,13 +152,7 @@ public class AdminTradeController {
         if (SpotOrder.STATUS_FILLED == order.getStatus() || SpotOrder.STATUS_CANCELLED == order.getStatus()) {
             return R.fail("Current status does not allow cancellation"); // 当前状态不允许撤单
         }
-        int updated = spotMapper.update(null, new LambdaUpdateWrapper<SpotOrder>()
-                .eq(SpotOrder::getId, id)
-                .and(w -> w.notIn(SpotOrder::getStatus, SpotOrder.STATUS_FILLED, SpotOrder.STATUS_CANCELLED)
-                        .or().isNull(SpotOrder::getStatus))
-                .set(SpotOrder::getStatus, SpotOrder.STATUS_CANCELLED)
-                .set(SpotOrder::getUpdatedAt, LocalDateTime.now()));
-        if (updated == 0) return R.fail("Order status has changed, please refresh and try again"); // 订单状态已变化，请刷新后重试
+        spotTradeService.cancel(order.getUserId(), id);
         logService.log(authService.currentAdminId(), "trade", "spot_cancel",
                 "spot_order", String.valueOf(id), dto == null ? null : dto.getReason());
         return R.ok();
@@ -172,6 +177,7 @@ public class AdminTradeController {
         return R.ok();
     }
 
+    @Transactional
     @PostMapping("/option/{id}/cancel")
     public R<Void> cancelOption(@PathVariable Long id, @RequestBody(required = false) InterventionDTO dto) {
         requireReason(dto == null ? null : dto.getReason());
@@ -187,6 +193,14 @@ public class AdminTradeController {
                 .set(OptionOrder::getStatus, OptionOrder.STATUS_CANCELLED)
                 .set(OptionOrder::getUpdatedAt, LocalDateTime.now()));
         if (updated == 0) return R.fail("Order status has changed, please refresh and try again"); // 订单状态已变化，请刷新后重试
+        if (order.getAmount() != null && order.getAmount().signum() > 0) {
+            Symbol symbolEntity = symbolService.findBySymbol("option", order.getSymbol());
+            String coin = symbolEntity != null
+                    ? settlementService.settlementCoin(symbolEntity)
+                    : (order.getSettlementCoin() != null && !order.getSettlementCoin().isBlank() ? order.getSettlementCoin() : "USDT");
+            accountService.increase(order.getUserId(), Account.TRADE, coin,
+                    order.getAmount(), "option", order.getOrderNo(), "后台取消期权退回本金");
+        }
         logService.log(authService.currentAdminId(), "trade", "option_cancel",
                 "option_order", String.valueOf(id), dto == null ? null : dto.getReason());
         return R.ok();

@@ -1,5 +1,6 @@
 import { Result, Spin } from 'antd';
 import type React from 'react';
+import { Navigate } from 'react-router-dom';
 import { useAdminStore } from '@/store/adminStore';
 import { hasPermission } from '@/utils/permission';
 
@@ -19,7 +20,10 @@ export default function PermissionRoute({ permission, children }: Props) {
       </div>
     );
   }
-  if (admin && !hasPermission(admin.permissions, permission)) {
+  if (!admin) {
+    return <Navigate to="/login" replace />;
+  }
+  if (!hasPermission(admin.permissions, permission)) {
     return <Result status="403" title="403" subTitle="无权限访问该页面" />;
   }
   return <>{children}</>;

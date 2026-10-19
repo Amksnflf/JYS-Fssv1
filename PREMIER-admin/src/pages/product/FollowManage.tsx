@@ -1,4 +1,5 @@
 import { App, Tabs, Tag } from 'antd';
+import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import AdminDataPage from '@/components/AdminDataPage';
 import http from '@/api/http';
@@ -6,10 +7,26 @@ import http from '@/api/http';
 export default function FollowManage() {
   const { message } = App.useApp();
   const nav = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState<string>(searchParams.get('traderId') ? 'order' : 'trader');
+
+  useEffect(() => {
+    if (searchParams.get('traderId')) {
+      setActiveTab('order');
+    }
+  }, [searchParams]);
+
   return (
     <Tabs
-      defaultActiveKey={searchParams.get('traderId') ? 'order' : 'trader'}
+      activeKey={activeTab}
+      onChange={(key) => {
+        setActiveTab(key);
+        if (key === 'trader' && searchParams.has('traderId')) {
+          const next = new URLSearchParams(searchParams);
+          next.delete('traderId');
+          setSearchParams(next, { replace: true });
+        }
+      }}
       items={[
         {
           key: 'trader',

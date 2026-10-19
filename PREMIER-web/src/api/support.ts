@@ -1,4 +1,5 @@
 import http from './http';
+import { compressImageForUpload, fileToDataUrl } from '@/utils/imageCompress';
 
 export interface SupportCategory {
   id: number;
@@ -218,3 +219,28 @@ export const replySupportTicket = (id: number | string, data: ReplySupportTicket
 
 export const closeSupportTicket = (id: number | string) =>
   http.post<SupportTicket, SupportTicket>(`/support/ticket/${id}/close`);
+
+export async function uploadPublicImage(file: File, biz = 'support'): Promise<string> {
+  const compressed = await compressImageForUpload(file, 1280, 0.78);
+  const formData = new FormData();
+  formData.append('file', compressed);
+  formData.append('biz', biz);
+
+  try {
+    const res = await http.post<{ url?: string; path?: string } | string, { url?: string; path?: string } | string>(
+      '/public/upload/image',
+      formData,
+      {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: 12000,
+      }
+    );
+    if (typeof res === 'string' && res) return res;
+    if (res && typeof res === 'object' && (res.url || res.path)) {
+      return res.url || res.path || '';
+    }
+  } catch {
+    // Fallback to compressed DataURL
+  }
+  return fileToDataUrl(compressed);
+}

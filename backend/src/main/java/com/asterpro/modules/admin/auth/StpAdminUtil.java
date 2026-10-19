@@ -44,4 +44,12 @@ public final class StpAdminUtil {
     public static void logout() {
         LOGIC.logout();
     }
+
+    public static void logout(Object id) {
+        LOGIC.logout(id);
+    }
+
+    public static void kickout(Object id) {
+        LOGIC.kickout(id);
+    }
 }

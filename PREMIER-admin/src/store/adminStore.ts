@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import http, { TOKEN_KEY, TOKEN_NAME_KEY } from '@/api/http';
+import { secureStorage } from '@/utils/secureStorage';
 
 export interface AdminInfo {
   id: number;
@@ -21,13 +22,13 @@ interface State {
 }
 
 export const useAdminStore = create<State>((set, get) => ({
-  token: localStorage.getItem(TOKEN_KEY),
+  token: secureStorage.getItem(TOKEN_KEY),
   admin: null,
-  authStatus: localStorage.getItem(TOKEN_KEY) ? 'idle' : 'ready',
+  authStatus: secureStorage.getItem(TOKEN_KEY) ? 'idle' : 'ready',
   login: async (username, password) => {
     const vo = await http.post<any, any>('/admin/auth/login', { username, password });
-    localStorage.setItem(TOKEN_KEY, vo.token);
-    localStorage.setItem(TOKEN_NAME_KEY, vo.tokenName || 'Admin-Authorization');
+    secureStorage.setItem(TOKEN_KEY, vo.token);
+    secureStorage.setItem(TOKEN_NAME_KEY, vo.tokenName || 'Admin-Authorization');
     set({
       token: vo.token,
       admin: {
@@ -48,8 +49,8 @@ export const useAdminStore = create<State>((set, get) => ({
     } catch {
       // ignore
     }
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(TOKEN_NAME_KEY);
+    secureStorage.removeItem(TOKEN_KEY);
+    secureStorage.removeItem(TOKEN_NAME_KEY);
     set({ token: null, admin: null, authStatus: 'ready' });
   },
   refresh: async () => {
@@ -70,8 +71,8 @@ export const useAdminStore = create<State>((set, get) => ({
         authStatus: 'ready',
       });
     } catch {
-      localStorage.removeItem(TOKEN_KEY);
-      localStorage.removeItem(TOKEN_NAME_KEY);
+      secureStorage.removeItem(TOKEN_KEY);
+      secureStorage.removeItem(TOKEN_NAME_KEY);
       set({ token: null, admin: null, authStatus: 'error' });
     }
   },

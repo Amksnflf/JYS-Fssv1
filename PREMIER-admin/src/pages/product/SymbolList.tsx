@@ -3,6 +3,7 @@ import { App, Button, Checkbox, Form, Input, InputNumber, Modal, Select, Space, 
 import type { UploadProps } from 'antd';
 import http from '@/api/http';
 import CoinSelect from '@/components/CoinSelect';
+import { compressImageFile } from '@/utils/url';
 import { UploadOutlined } from '@ant-design/icons';
 
 interface CoinMeta {
@@ -111,6 +112,7 @@ const SOURCE_OPTIONS = [
   { value: 'htx', label: 'HTX' },
   { value: 'alltick', label: 'AllTick' },
   { value: 'htx_swap', label: 'HTX Swap' },
+  { value: 'wallstreetcn', label: 'WallstreetCN (外汇)' },
 ];
 
 const STATS_MODE_OPTIONS = [
@@ -311,11 +313,12 @@ export default function SymbolListPage() {
       return;
     }
 
-    const formData = new FormData();
-    formData.append('file', options.file as Blob);
-    formData.append('biz', 'coin');
     setUploadingCoinLogo(true);
     try {
+      const compressed = await compressImageFile(options.file as Blob);
+      const formData = new FormData();
+      formData.append('file', compressed);
+      formData.append('biz', 'coin');
       const uploadResult = await http.post<UploadResult, UploadResult>('/admin/upload/image', formData);
       await http.post('/admin/content/coin/save', {
         ...coin,
@@ -843,7 +846,7 @@ export default function SymbolListPage() {
           <div className="admin-table-header">
             <div>
               <div className="admin-table-title">现货行情核查</div>
-              <div className="admin-table-meta">共 {quoteChecks.length} 条，重点查看“可疑原因”不为“正常”的记录</div>
+              <div className="admin-table-meta">共 {quoteChecks.length} 条，重点查看“可疑原因”不为“正常 / Normal”的记录</div>
             </div>
           </div>
           <Table
@@ -909,7 +912,7 @@ export default function SymbolListPage() {
                 title: '可疑原因',
                 dataIndex: 'suspectReason',
                 width: 260,
-                render: (value) => value === '正常' ? <Tag color="green">{value}</Tag> : <Tag color="orange">{value ?? '--'}</Tag>,
+                render: (value) => (value === '正常' || value === 'Normal') ? <Tag color="green">{value}</Tag> : <Tag color="orange">{value ?? '--'}</Tag>,
               },
             ]}
             scroll={{ x: 2200 }}

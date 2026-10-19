@@ -1,6 +1,17 @@
 import { create } from 'zustand';
-import { clearToken, setToken, setUnauthorizedHandler } from '@/api/http';
+import { clearToken, getToken, setToken, setUnauthorizedHandler } from '@/api/http';
 import { getUserInfo, logout as apiLogout, type UserInfoVO } from '@/api/auth';
+import { maskSensitiveText, secureStorage } from '@/utils/secureStorage';
+
+const USER_STORAGE_KEY = 'aster_user';
+
+function sanitizeUserInfo(info: UserInfoVO): UserInfoVO {
+  return {
+    ...info,
+    phone: info.phone ? maskSensitiveText(info.phone) : info.phone,
+    email: info.email ? maskSensitiveText(info.email) : info.email,
+  };
+}
 
 interface UserState {
   token: string;
@@ -13,11 +24,11 @@ interface UserState {
 }
 
 export const useUserStore = create<UserState>((set, get) => ({
-  token: localStorage.getItem('aster_token') || '',
+  token: getToken(),
   user: (() => {
     try {
-      const u = localStorage.getItem('aster_user');
-      return u ? JSON.parse(u) : null;
+      const u = secureStorage.getItem(USER_STORAGE_KEY);
+      return u ? sanitizeUserInfo(JSON.parse(u) as UserInfoVO) : null;
     } catch {
       return null;
     }
@@ -26,7 +37,7 @@ export const useUserStore = create<UserState>((set, get) => ({
 
   clearAuthLocal: () => {
     clearToken();
-    localStorage.removeItem('aster_user');
+    secureStorage.removeItem(USER_STORAGE_KEY);
     set({ token: '', user: null, loading: false });
   },
 
@@ -53,14 +64,11 @@ export const useUserStore = create<UserState>((set, get) => ({
     set({ loading: true });
     try {
       const info = await getUserInfo();
-      if (info) {
-        try {
-          localStorage.setItem('aster_user', JSON.stringify(info));
-        } catch {
-          // ignore
-        }
+      const sanitized = info ? sanitizeUserInfo(info) : null;
+      if (sanitized) {
+        secureStorage.setItem(USER_STORAGE_KEY, JSON.stringify(sanitized));
       }
-      set({ user: info });
+      set({ user: sanitized });
     } catch {
       get().clearAuthLocal();
     } finally {

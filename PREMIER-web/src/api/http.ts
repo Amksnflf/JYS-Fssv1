@@ -1,5 +1,6 @@
 import axios, { AxiosError, AxiosResponse } from 'axios';
 import i18n from '@/i18n';
+import { secureStorage } from '@/utils/secureStorage';
 
 export interface ApiResp<T> {
   code: number;
@@ -22,9 +23,9 @@ export class ApiError extends Error {
   }
 }
 
-export const getToken = () => localStorage.getItem(TOKEN_KEY) || '';
-export const setToken = (t: string) => localStorage.setItem(TOKEN_KEY, t);
-export const clearToken = () => localStorage.removeItem(TOKEN_KEY);
+export const getToken = () => secureStorage.getItem(TOKEN_KEY) || '';
+export const setToken = (t: string) => secureStorage.setItem(TOKEN_KEY, t);
+export const clearToken = () => secureStorage.removeItem(TOKEN_KEY);
 export const setUnauthorizedHandler = (handler: (() => void) | null) => {
   unauthorizedHandler = handler;
 };
@@ -46,13 +47,11 @@ function redirectToLogin() {
   if (typeof window === 'undefined') return;
   const path = `${window.location.pathname}${window.location.search}${window.location.hash}`;
   if (path.startsWith('/auth/')) return;
-  // window.location.assign(`/auth/wallet?redirect=${encodeURIComponent(path)}`);
 }
 
 function handleUnauthorized() {
-  if (typeof window !== 'undefined' && localStorage.getItem('bypass_auth')) return;
+  clearToken();
   if (unauthorizedHandler) unauthorizedHandler();
-  else clearToken();
   redirectToLogin();
 }
 

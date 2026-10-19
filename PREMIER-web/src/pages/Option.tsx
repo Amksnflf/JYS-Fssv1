@@ -74,6 +74,7 @@ export default function OptionPage() {
   const symbolParam = searchParams.get('symbol')?.toUpperCase();
   const codeParam = searchParams.get('code');
   const categoryParam = searchParams.get('category') || 'crypto';
+  const sideParam = searchParams.get('side')?.toLowerCase();
 
   const [symbols, setSymbols] = useState<SymbolRow[]>([]);
   const [current, setCurrent] = useState<SymbolRow | null>(null);
@@ -92,7 +93,16 @@ export default function OptionPage() {
   const [periods, setPeriods] = useState<OptionPeriod[]>([]);
   const [pickedPeriod, setPickedPeriod] = useState<number>(60);
   const [tradeMode, setTradeMode] = useState<'instant' | 'timed'>('instant');
-  const [direction, setDirection] = useState<1 | 2>(1);
+  const [direction, setDirection] = useState<1 | 2>(() =>
+    sideParam === 'sell' || sideParam === 'down' || sideParam === 'put' || sideParam === '2' ? 2 : 1
+  );
+  useEffect(() => {
+    if (sideParam === 'sell' || sideParam === 'down' || sideParam === 'put' || sideParam === '2') {
+      setDirection(2);
+    } else if (sideParam === 'buy' || sideParam === 'up' || sideParam === 'call' || sideParam === '1') {
+      setDirection(1);
+    }
+  }, [sideParam]);
   const [amountInput, setAmountInput] = useState('');
   const [percent, setPercent] = useState(0);
   const [placing, setPlacing] = useState(false);
@@ -788,6 +798,7 @@ export default function OptionPage() {
               <Orderbook
                 price={livePriceNum}
                 precision={precision}
+                precisionStep={bookPrecisionStep}
                 baseCoin={baseCoin}
                 quoteCoin={quoteCoin}
                 depth={depth}

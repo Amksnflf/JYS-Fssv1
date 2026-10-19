@@ -129,15 +129,15 @@ export default function AssetsPage() {
     };
   }, [token]);
 
-  const rows = useMemo(() => buildRows(data, coins, ASSET_COINS, hideSmall), [data, coins, hideSmall]);
+  const targetAccountType = activeTab === 'spot' ? 1 : activeTab === 'trade' ? 2 : 0;
+  const rows = useMemo(
+    () => buildRows(data, coins, ASSET_COINS, hideSmall, targetAccountType),
+    [data, coins, hideSmall, targetAccountType]
+  );
   const filteredRows = useMemo(() => {
     let list = rows;
-    if (activeTab === 'hasBalance') {
+    if (activeTab === 'hasBalance' || activeTab === 'spot' || activeTab === 'trade') {
       list = list.filter((r) => Number(r.available) > 0 || Number(r.valuation) > 0);
-    } else if (activeTab === 'spot') {
-      list = list.filter((r) => r.accountType === 1 || r.accountType === 0);
-    } else if (activeTab === 'trade') {
-      list = list.filter((r) => r.accountType === 2);
     }
 
     if (!searchKeyword.trim()) return list;
@@ -651,7 +651,7 @@ export default function AssetsPage() {
                 onClick={() => {
                   const coin = selectedCoin;
                   setSelectedCoin(null);
-                  nav(`/trade?symbol=${coin}USDT`);
+                  nav(`/trade?symbol=${coin === 'USDT' ? 'BTC-USDT' : `${coin}-USDT`}`);
                 }}
                 className="flex items-center justify-center gap-2 h-11 rounded-2xl bg-slate-900 text-white text-xs font-bold shadow-sm active:scale-98 transition cursor-pointer"
               >
@@ -813,15 +813,25 @@ function AssetRow({
   );
 }
 
-function buildRows(data: AssetOverview | null, coins: CoinInfo[], preferred: string[], hideSmall: boolean): AccountVO[] {
-  const byCoin = new Map((data?.coinSummary ?? []).map((row) => [row.coin, row]));
+function buildRows(
+  data: AssetOverview | null,
+  coins: CoinInfo[],
+  preferred: string[],
+  hideSmall: boolean,
+  targetAccountType = 0,
+): AccountVO[] {
+  const sourceList =
+    targetAccountType > 0
+      ? (data?.accounts ?? []).filter((row) => row.accountType === targetAccountType)
+      : (data?.coinSummary ?? []);
+  const byCoin = new Map(sourceList.map((row) => [row.coin, row]));
   const coinSet = new Set([...preferred, ...coins.map((coin) => coin.code)]);
   return Array.from(coinSet)
     .map((coin) => {
       const existing = byCoin.get(coin);
       return (
         existing ?? {
-          accountType: 0,
+          accountType: targetAccountType,
           coin,
           available: '0',
           frozen: '0',

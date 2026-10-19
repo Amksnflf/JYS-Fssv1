@@ -90,7 +90,7 @@ export default function OptionOrders() {
         <AdminUserSelect value={userId} onChange={(v) => setUserId(v)} />
         <Select allowClear placeholder="状态" value={status} style={{ width: 140 }}
           onChange={(v) => setStatus(v)}
-          options={[{ value: 0, label: '进行中' }, { value: 1, label: '已结算' }]} />
+          options={[{ value: 0, label: '进行中' }, { value: 1, label: '已结算' }, { value: 3, label: '已取消' }]} />
         <SymbolSelect tradeType="option" value={symbol || undefined} onChange={(v) => setSymbol(v ?? '')} />
         <Button type="primary" onClick={() => { setPageNo(1); setExtraParams({ userId, status, symbol }); }}>
           查询

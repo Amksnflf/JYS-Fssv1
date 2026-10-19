@@ -56,25 +56,37 @@ public class NftService {
         return item;
     }
 
+    private volatile Map<String, Object> cachedStats;
+    private volatile long cachedStatsAt = 0L;
+
     public Map<String, Object> stats() {
-        List<NftOrder> orders = orderMapper.selectList(new LambdaQueryWrapper<NftOrder>());
-        List<NftItem> items = itemMapper.selectList(new LambdaQueryWrapper<NftItem>());
+        long now = System.currentTimeMillis();
+        Map<String, Object> local = cachedStats;
+        if (local != null && (now - cachedStatsAt) < 30_000L) {
+            return local;
+        }
+        List<NftOrder> orders = orderMapper.selectList(new LambdaQueryWrapper<NftOrder>()
+                .select(NftOrder::getPrice, NftOrder::getBuyerId));
+        Long itemCount = itemMapper.selectCount(new LambdaQueryWrapper<NftItem>());
         Map<String, Object> result = new HashMap<>();
         result.put("nftTradingNumber", orders.size());
         result.put("nftTradingVolume", orders.stream()
                 .map(NftOrder::getPrice)
                 .filter(java.util.Objects::nonNull)
                 .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add));
-        result.put("nftNFTNumber", items.size());
+        result.put("nftNFTNumber", itemCount == null ? 0 : itemCount);
         result.put("nftNumOfBeneficiaries", orders.stream()
                 .map(NftOrder::getBuyerId)
                 .filter(java.util.Objects::nonNull)
                 .distinct()
                 .count());
         NftCollection withVideo = collectionMapper.selectOne(new LambdaQueryWrapper<NftCollection>()
+                .select(NftCollection::getVideoUrl)
                 .isNotNull(NftCollection::getVideoUrl)
                 .last("limit 1"));
         result.put("nftVideoLiveUrl1", withVideo == null ? "" : withVideo.getVideoUrl());
+        cachedStats = result;
+        cachedStatsAt = now;
         return result;
     }
 

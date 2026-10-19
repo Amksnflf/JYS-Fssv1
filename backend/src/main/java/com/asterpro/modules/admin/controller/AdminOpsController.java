@@ -3,6 +3,8 @@ package com.asterpro.modules.admin.controller;
 import com.asterpro.common.api.R;
 import com.asterpro.modules.admin.service.AdminAuthService;
 import com.asterpro.modules.admin.service.AdminLogService;
+import com.asterpro.modules.asset.entity.Account;
+import com.asterpro.modules.asset.service.AccountService;
 import com.asterpro.modules.finance.entity.LoanOrder;
 import com.asterpro.modules.finance.mapper.LoanOrderMapper;
 import com.asterpro.modules.follow.entity.FollowOrder;
@@ -20,9 +22,14 @@ import com.asterpro.modules.system.mapper.I18nDictMapper;
 import com.asterpro.modules.system.mapper.RiskRuleMapper;
 import com.asterpro.modules.system.mapper.SystemConfigMapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 @RestController
 @RequestMapping("/admin/ops")
@@ -37,6 +44,7 @@ public class AdminOpsController {
     private final RiskRuleMapper riskRuleMapper;
     private final I18nDictMapper i18nDictMapper;
     private final SystemConfigMapper systemConfigMapper;
+    private final AccountService accountService;
     private final AdminAuthService authService;
     private final AdminLogService logService;
 
@@ -54,14 +62,53 @@ public class AdminOpsController {
         return R.ok(loanOrderMapper.selectPage(com.asterpro.common.util.PageUtil.page(pageNo, pageSize), w));
     }
 
+    @Transactional
     @PostMapping("/loan-order/{id}/status")
     public R<Void> loanOrderStatus(@PathVariable Long id, @RequestBody StatusDTO dto) {
         requireReason(dto);
         requireStatusInRange(dto.getStatus(), 0, 5);
         LoanOrder order = loanOrderMapper.selectById(id);
         if (order == null) return R.fail("Loan order does not exist"); // 借币订单不存在
-        order.setStatus(dto.getStatus());
-        loanOrderMapper.updateById(order);
+        Integer oldStatus = order.getStatus();
+        Integer newStatus = dto.getStatus();
+        if (oldStatus != null && oldStatus.equals(newStatus)) {
+            return R.ok();
+        }
+        int updated = loanOrderMapper.update(null, new LambdaUpdateWrapper<LoanOrder>()
+                .eq(LoanOrder::getId, id)
+                .eq(oldStatus != null, LoanOrder::getStatus, oldStatus)
+                .set(LoanOrder::getStatus, newStatus)
+                .set(newStatus == LoanOrder.STATUS_REPAID, LoanOrder::getRepaidAt, LocalDateTime.now()));
+        if (updated == 0) {
+            return R.fail("Order status has changed, please refresh and retry");
+        }
+        boolean wasBorrowing = oldStatus != null && (oldStatus == LoanOrder.STATUS_BORROWING || oldStatus == 0);
+        boolean isRepaid = newStatus == LoanOrder.STATUS_REPAID || (oldStatus != null && oldStatus == 0 && newStatus == 1);
+        if (wasBorrowing && order.getCollateralAmount() != null && order.getCollateralAmount().signum() > 0) {
+            String collateralCoin = "USDT";
+            Account acc = accountService.getOrCreate(order.getUserId(), Account.SPOT, collateralCoin);
+            BigDecimal frozen = acc.getFrozen() == null ? BigDecimal.ZERO : acc.getFrozen();
+            if (isRepaid) {
+                if (frozen.compareTo(order.getCollateralAmount()) >= 0) {
+                    accountService.unfreeze(order.getUserId(), Account.SPOT, collateralCoin,
+                            order.getCollateralAmount(), "loan", "ADMIN-RELEASE-" + order.getId(), "后台结清借币释放抵押");
+                } else {
+                    if (frozen.signum() > 0) {
+                        accountService.unfreeze(order.getUserId(), Account.SPOT, collateralCoin,
+                                frozen, "loan", "ADMIN-RELEASE-" + order.getId(), "后台结清借币释放抵押");
+                    }
+                    BigDecimal diff = order.getCollateralAmount().subtract(frozen);
+                    if (diff.signum() > 0) {
+                        accountService.increase(order.getUserId(), Account.SPOT, collateralCoin,
+                                diff, "loan", "ADMIN-RELEASE-" + order.getId(), "后台结清借币退还抵押");
+                    }
+                }
+            } else if (newStatus == LoanOrder.STATUS_LIQUIDATED && frozen.signum() > 0) {
+                BigDecimal deduct = frozen.min(order.getCollateralAmount());
+                accountService.deductFrozen(order.getUserId(), Account.SPOT, collateralCoin,
+                        deduct, "loan", "ADMIN-LIQUIDATE-" + order.getId(), "后台清算借币扣除抵押");
+            }
+        }
         logService.log(authService.currentAdminId(), "ops", "loan_order_status",
                 "loan_order", String.valueOf(id), "status=" + dto.getStatus() + " reason=" + dto.getReason());
         return R.ok();
@@ -81,15 +128,32 @@ public class AdminOpsController {
         return R.ok(nftOrderMapper.selectPage(com.asterpro.common.util.PageUtil.page(pageNo, pageSize), w));
     }
 
+    @Transactional
     @PostMapping("/nft-order/{id}/status")
     public R<Void> nftOrderStatus(@PathVariable Long id, @RequestBody StatusDTO dto) {
         requireReason(dto);
         requireStatusInRange(dto.getStatus(), 0, 5);
         NftOrder order = nftOrderMapper.selectById(id);
         if (order == null) return R.fail("NFT order does not exist"); // NFT 订单不存在
-        order.setStatus(dto.getStatus());
-        order.setRemark(dto.getReason());
-        nftOrderMapper.updateById(order);
+        Integer oldStatus = order.getStatus();
+        Integer newStatus = dto.getStatus();
+        if (oldStatus != null && oldStatus.equals(newStatus)) {
+            return R.ok();
+        }
+        int updated = nftOrderMapper.update(null, new LambdaUpdateWrapper<NftOrder>()
+                .eq(NftOrder::getId, id)
+                .eq(oldStatus != null, NftOrder::getStatus, oldStatus)
+                .set(NftOrder::getStatus, newStatus)
+                .set(NftOrder::getRemark, dto.getReason()));
+        if (updated == 0) {
+            return R.fail("Order status has changed, please refresh and retry");
+        }
+        if (oldStatus != null && oldStatus == 1 && (newStatus == 2 || newStatus == 3)
+                && order.getBuyerId() != null && order.getPrice() != null && order.getPrice().signum() > 0) {
+            String payCoin = (order.getCoin() != null && !order.getCoin().isBlank()) ? order.getCoin() : "USDT";
+            accountService.increase(order.getBuyerId(), Account.SPOT, payCoin,
+                    order.getPrice(), "nft", "ADMIN-REFUND-" + order.getId(), "后台取消/退款NFT订单退回资金");
+        }
         logService.log(authService.currentAdminId(), "ops", "nft_order_status",
                 "nft_order", String.valueOf(id), "status=" + dto.getStatus() + " reason=" + dto.getReason());
         return R.ok();
@@ -161,14 +225,39 @@ public class AdminOpsController {
         return R.ok(followOrderMapper.selectPage(com.asterpro.common.util.PageUtil.page(pageNo, pageSize), w));
     }
 
+    @Transactional
     @PostMapping("/follow-order/{id}/status")
     public R<Void> followOrderStatus(@PathVariable Long id, @RequestBody StatusDTO dto) {
         requireReason(dto);
         requireStatusInRange(dto.getStatus(), 0, 5);
         FollowOrder order = followOrderMapper.selectById(id);
         if (order == null) return R.fail("Follow order does not exist"); // 跟单关系不存在
-        order.setStatus(dto.getStatus());
-        followOrderMapper.updateById(order);
+        Integer oldStatus = order.getStatus();
+        Integer newStatus = dto.getStatus();
+        if (oldStatus != null && oldStatus.equals(newStatus)) {
+            return R.ok();
+        }
+        int updated = followOrderMapper.update(null, new LambdaUpdateWrapper<FollowOrder>()
+                .eq(FollowOrder::getId, id)
+                .eq(oldStatus != null, FollowOrder::getStatus, oldStatus)
+                .set(FollowOrder::getStatus, newStatus));
+        if (updated == 0) {
+            return R.fail("Order status has changed, please refresh and retry");
+        }
+        if (oldStatus != null && oldStatus == FollowOrder.STATUS_RUNNING && newStatus == FollowOrder.STATUS_CANCELLED) {
+            if (order.getAmount() != null && order.getAmount().signum() > 0) {
+                accountService.increase(order.getUserId(), Account.TRADE, "USDT",
+                        order.getAmount(), "follow", "ADMIN-CANCEL-" + order.getId(), "后台取消跟单释放资金");
+            }
+            if (order.getTraderId() != null) {
+                FollowTrader trader = followTraderMapper.selectById(order.getTraderId());
+                if (trader != null) {
+                    int next = (trader.getFollowers() == null ? 0 : trader.getFollowers()) - 1;
+                    trader.setFollowers(Math.max(0, next));
+                    followTraderMapper.updateById(trader);
+                }
+            }
+        }
         logService.log(authService.currentAdminId(), "ops", "follow_order_status",
                 "follow_order", String.valueOf(id), "status=" + dto.getStatus() + " reason=" + dto.getReason());
         return R.ok();

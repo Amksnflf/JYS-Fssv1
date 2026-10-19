@@ -6,6 +6,7 @@ import type { QuoteDepth } from '@/api/quote';
 interface Props {
   price: number;
   precision: number;
+  precisionStep?: number;
   baseCoin?: string;
   quoteCoin?: string;
   mode?: 'both' | 'bids' | 'asks';
@@ -25,6 +26,7 @@ interface Row {
 export default function Orderbook({
   price,
   precision,
+  precisionStep = 0,
   baseCoin = 'BTC',
   quoteCoin = 'USDT',
   mode = 'both',
@@ -35,6 +37,7 @@ export default function Orderbook({
   depth,
 }: Props) {
   const { t } = useTranslation();
+  const displayPrecision = Math.max(0, Math.min(8, precision + Math.max(0, precisionStep)));
   const { asks, bids } = useMemo(() => {
     // 确保买卖盘口按照价格精准排序：
     // Asks 卖盘按价格升序排序 [ask1 (最低卖价), ask2, ... askN]
@@ -74,8 +77,8 @@ export default function Orderbook({
 
   const fmt = (n: number) =>
     n.toLocaleString('en-US', {
-      minimumFractionDigits: precision,
-      maximumFractionDigits: precision,
+      minimumFractionDigits: displayPrecision,
+      maximumFractionDigits: displayPrecision,
     });
 
   const fmtAmount = (n: number) => {

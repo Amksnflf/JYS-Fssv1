@@ -43,7 +43,7 @@ import KLineChart from './trade/KLineChart';
 import Orderbook from './trade/Orderbook';
 import PcMarketMoves from './trade/PcMarketMoves';
 import SymbolDrawer from './trade/SymbolDrawer';
-import { KLINE_PERIODS } from './trade/klinePeriods';
+import { KLINE_PERIODS, normalizeKlinePeriodForApi } from './trade/klinePeriods';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useFavoriteSymbols } from '@/hooks/useFavoriteSymbols';
 import { useMarketStore } from '@/store/marketStore';
@@ -72,6 +72,7 @@ export default function PerpPage() {
   const symbolParam = searchParams.get('symbol')?.toUpperCase();
   const codeParam = searchParams.get('code');
   const categoryParam = searchParams.get('category') || 'crypto';
+  const sideParam = searchParams.get('side')?.toLowerCase();
 
   const [symbols, setSymbols] = useState<SymbolRow[]>([]);
   const [current, setCurrent] = useState<SymbolRow | null>(null);
@@ -103,7 +104,16 @@ export default function PerpPage() {
   const [depth, setDepth] = useState<QuoteDepth | null>(null);
   const [stats24h, setStats24h] = useState<QuoteStats24h | null>(null);
 
-  const [side, setSide] = useState<1 | 2>(1);
+  const [side, setSide] = useState<1 | 2>(() =>
+    sideParam === 'sell' || sideParam === 'short' || sideParam === '2' ? 2 : 1
+  );
+  useEffect(() => {
+    if (sideParam === 'sell' || sideParam === 'short' || sideParam === '2') {
+      setSide(2);
+    } else if (sideParam === 'buy' || sideParam === 'long' || sideParam === '1') {
+      setSide(1);
+    }
+  }, [sideParam]);
   const [orderType, setOrderType] = useState<1 | 2>(2);
   const [marginMode, setMarginMode] = useState<1 | 2>(1);
   const [leverage, setLeverage] = useState(1);
@@ -324,10 +334,41 @@ export default function PerpPage() {
     }
   };
 
+  const [bookPrecisionStep, setBookPrecisionStep] = useState(0);
+
   const onClosePos = async (id: number) => {
     if (!window.confirm(t('perp.confirmClose'))) return;
     try {
       await closePerp(id);
+      toast.success(t('perp.closeSuccess'));
+      refreshAccount();
+      refreshPositions();
+      refreshHistory();
+      refreshOrders();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'fail');
+    }
+  };
+
+  const handleBulkAction = async () => {
+    if (tab === 'orders') {
+      if (orders.length === 0) {
+        toast.info(t('common.noData', '暂无委托单'));
+        return;
+      }
+      refreshOrders();
+      toast.info(t('perp.ordersRefreshed', '已刷新委托状态'));
+      return;
+    }
+    if (visiblePositions.length === 0) {
+      toast.info(t('perp.noPosition', '暂无持仓'));
+      return;
+    }
+    if (!window.confirm(t('perp.confirmCloseAll', '确定一键平掉当前全部持仓？'))) return;
+    try {
+      for (const pos of visiblePositions) {
+        await closePerp(pos.id);
+      }
       toast.success(t('perp.closeSuccess'));
       refreshAccount();
       refreshPositions();
@@ -641,12 +682,12 @@ export default function PerpPage() {
       {chartVisible && (
         <div className="border-t border-slate-100 bg-white">
           <div className="flex items-center gap-2.5 overflow-x-auto px-3 py-1.5 text-xs scrollbar-none">
-            {['1秒', '10秒', '分时', '1分', '3分', '5分', '15分', '30分', '1时', '2时', '4时'].map((lbl) => {
+            {['分时', '1分', '5分', '15分', '30分', '1时', '2时', '4时'].map((lbl) => {
               const pMap: Record<string, string> = {
-                '分时': '1m', '1分': '1m', '3分': '3m', '5分': '5m',
+                '分时': '1m-line', '1分': '1m', '5分': '5m',
                 '15分': '15m', '30分': '30m', '1时': '1h', '2时': '2h', '4时': '4h'
               };
-              const active = pMap[lbl] ? period === pMap[lbl] : lbl === '15分';
+              const active = pMap[lbl] ? period === pMap[lbl] : false;
               return (
                 <button
                   key={lbl}
@@ -662,7 +703,7 @@ export default function PerpPage() {
             })}
           </div>
           <div className="h-[210px] w-full">
-            {code && <KLineChart alltickCode={code} period={period} livePrice={livePrice} height={210} />}
+            {code && <KLineChart alltickCode={code} period={normalizeKlinePeriodForApi(period)} livePrice={livePrice} height={210} />}
           </div>
         </div>
       )}
@@ -860,6 +901,7 @@ export default function PerpPage() {
           <Orderbook
             price={livePriceNum}
             precision={precision}
+            precisionStep={bookPrecisionStep}
             baseCoin={current?.baseCoin}
             quoteCoin={current?.quoteCoin}
             depth={depth}
@@ -871,9 +913,10 @@ export default function PerpPage() {
           <div className="mt-2 flex items-center gap-1">
             <button
               type="button"
+              onClick={() => setBookPrecisionStep((v) => (v >= 3 ? 0 : v + 1))}
               className="flex h-7 flex-1 items-center justify-between rounded-[4px] bg-[#F5F6F8] border border-slate-200/60 px-2 text-[10px] font-semibold text-slate-600 num cursor-pointer hover:bg-slate-200/60"
             >
-              <span>{Math.pow(10, -precision).toFixed(precision)}</span>
+              <span>{Math.pow(10, -(precision + bookPrecisionStep)).toFixed(precision + bookPrecisionStep)}</span>
               <ChevronDown size={11} className="text-slate-400" />
             </button>
           </div>
@@ -931,7 +974,8 @@ export default function PerpPage() {
           </label>
           <button
             type="button"
-            className="text-slate-500 hover:text-slate-800 font-medium"
+            onClick={handleBulkAction}
+            className="text-slate-500 hover:text-slate-800 font-medium cursor-pointer"
           >
             {tab === 'orders' ? t('perp.bulkCancel', '全部撤单') : t('perp.closeAll', '一键全平')}
           </button>
@@ -1206,10 +1250,10 @@ function PerpPcOrderPanel({
   return (
     <div className="pc-trade-form pc-trade-form-perp text-[12px]">
       <div className="pc-trade-form-tabs mb-2 grid grid-cols-2 gap-1 rounded bg-bgSection p-1">
-        <button onClick={() => setMarginMode(1)} className={`h-7 rounded font-semibold ${marginMode === 1 ? 'bg-text text-white' : 'text-textSubPc'}`}>
+        <button onClick={() => setMarginMode(2)} className={`h-7 rounded font-semibold ${marginMode === 2 ? 'bg-text text-white' : 'text-textSubPc'}`}>
           {t('perp.cross')}
         </button>
-        <button onClick={() => setMarginMode(2)} className={`h-7 rounded font-semibold ${marginMode === 2 ? 'bg-text text-white' : 'text-textSubPc'}`}>
+        <button onClick={() => setMarginMode(1)} className={`h-7 rounded font-semibold ${marginMode === 1 ? 'bg-text text-white' : 'text-textSubPc'}`}>
           {t('perp.isolated')}
         </button>
       </div>

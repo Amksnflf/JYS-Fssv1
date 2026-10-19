@@ -10,12 +10,33 @@ export default defineConfig({
       '@': path.resolve(__dirname, 'src'),
     },
   },
+  esbuild: {
+    drop: ['console', 'debugger'],
+    legalComments: 'none',
+  },
+  build: {
+    sourcemap: false,
+    rollupOptions: {
+      output: {
+        entryFileNames: 'assets/a-[hash].js',
+        chunkFileNames: 'assets/c-[hash].js',
+        assetFileNames: 'assets/s-[hash].[ext]',
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return undefined;
+          if (id.includes('echarts')) return 'v-ec';
+          if (id.includes('antd') || id.includes('@ant-design') || id.includes('rc-')) return 'v-ui';
+          if (id.includes('react') || id.includes('scheduler') || id.includes('zustand')) return 'v-rt';
+          return undefined;
+        },
+      },
+    },
+  },
   server: {
-    host: '0.0.0.0',
+    host: '127.0.0.1',
     port: 9010,
     proxy: {
       '/api': {
-        target: 'https://admin.lyravault.io',
+        target: process.env.VITE_ADMIN_API_TARGET || 'http://127.0.0.1:7777',
         changeOrigin: true,
       },
     },

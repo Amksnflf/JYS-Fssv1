@@ -30,8 +30,13 @@ public class SecurityService {
             throw new BizException(400, "New password must be at least 8 characters"); // 新密码至少 8 位
         }
         UserSecurity sec = securityMapper.selectById(userId);
-        if (sec == null || !PasswordUtil.matches(oldPwd, sec.getLoginPassword())) {
-            throw new BizException(ResultCode.USER_PWD_ERROR);
+        if (sec == null) {
+            throw new BizException(ResultCode.USER_NOT_EXIST);
+        }
+        if (StrUtil.isNotBlank(sec.getLoginPassword())) {
+            if (StrUtil.isBlank(oldPwd) || !PasswordUtil.matches(oldPwd, sec.getLoginPassword())) {
+                throw new BizException(ResultCode.USER_PWD_ERROR);
+            }
         }
         sec.setLoginPassword(PasswordUtil.hash(newPwd));
         securityMapper.updateById(sec);
@@ -45,11 +50,16 @@ public class SecurityService {
         UserSecurity sec = securityMapper.selectById(userId);
         if (sec == null) throw new BizException(ResultCode.USER_NOT_EXIST);
         if (StrUtil.isNotBlank(sec.getPayPassword())) {
-            if (!PasswordUtil.matches(oldPayPwd, sec.getPayPassword())) {
+            boolean matchPayPwd = StrUtil.isNotBlank(oldPayPwd) && PasswordUtil.matches(oldPayPwd, sec.getPayPassword());
+            boolean matchLoginPwd = StrUtil.isNotBlank(oldPayPwd) && StrUtil.isNotBlank(sec.getLoginPassword())
+                    && PasswordUtil.matches(oldPayPwd, sec.getLoginPassword());
+            if (!matchPayPwd && !matchLoginPwd) {
                 throw new BizException(ResultCode.PAY_PWD_ERROR);
             }
-        } else if (StrUtil.isBlank(oldPayPwd) || !PasswordUtil.matches(oldPayPwd, sec.getLoginPassword())) {
-            throw new BizException(ResultCode.USER_PWD_ERROR.getCode(), "Please verify login password first"); // 请先验证登录密码
+        } else if (StrUtil.isNotBlank(sec.getLoginPassword())) {
+            if (StrUtil.isBlank(oldPayPwd) || !PasswordUtil.matches(oldPayPwd, sec.getLoginPassword())) {
+                throw new BizException(ResultCode.USER_PWD_ERROR.getCode(), "Please verify login password first"); // 请先验证登录密码
+            }
         }
         sec.setPayPassword(PasswordUtil.hash(newPayPwd));
         securityMapper.updateById(sec);

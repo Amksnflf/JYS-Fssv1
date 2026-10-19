@@ -6,11 +6,11 @@ import ToastContainer from './components/Toast';
 import './i18n';
 import './styles/index.css';
 import './styles/pc.css';
+import { initAntiScan } from './utils/antiScan';
 
-// 移动端调试工具：仅开发环境加载，不进生产包
-// if (import.meta.env.DEV) {
-  // void import('eruda').then(({ default: eruda }) => eruda.init());
-// }
+if (import.meta.env.PROD) {
+  initAntiScan();
+}
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

@@ -15,6 +15,7 @@ import com.asterpro.modules.trade.spot.entity.SpotTrade;
 import com.asterpro.modules.trade.spot.mapper.SpotOrderMapper;
 import com.asterpro.modules.trade.spot.mapper.SpotTradeMapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -224,20 +225,112 @@ public class SpotTradeService {
         if (order.getStatus() != SpotOrder.STATUS_PENDING) {
             throw new BizException("Only pending orders can be cancelled"); // 仅可撤销待成交订单
         }
+        int updated = orderMapper.update(null, new LambdaUpdateWrapper<SpotOrder>()
+                .eq(SpotOrder::getId, orderId)
+                .eq(SpotOrder::getStatus, SpotOrder.STATUS_PENDING)
+                .set(SpotOrder::getStatus, SpotOrder.STATUS_CANCELLED)
+                .set(SpotOrder::getUpdatedAt, LocalDateTime.now()));
+        if (updated == 0) {
+            throw new BizException("Order status has changed, please refresh and retry");
+        }
         Symbol symbol = symbolService.findBySymbol("spot", order.getSymbol());
         if (symbol == null) {
             throw new BizException(ResultCode.SYMBOL_NOT_EXIST);
         }
         if (order.getSide() == SpotOrder.SIDE_BUY) {
-            accountService.unfreeze(userId, Account.SPOT, settlementCoin(symbol),
-                    quoteToSettlement(symbol, order.getTotal()), "spot", order.getOrderNo(), "限价买单撤销退回");
+            String settleCoin = settlementCoin(symbol);
+            Account acc = accountService.getOrCreate(userId, Account.SPOT, settleCoin);
+            BigDecimal calcUnfreeze = quoteToSettlement(symbol, order.getTotal());
+            if (acc.getFrozen() != null && calcUnfreeze.compareTo(acc.getFrozen()) > 0) {
+                calcUnfreeze = acc.getFrozen();
+            }
+            if (calcUnfreeze.signum() > 0) {
+                accountService.unfreeze(userId, Account.SPOT, settleCoin,
+                        calcUnfreeze, "spot", order.getOrderNo(), "限价买单撤销退回");
+            }
         } else {
-            accountService.unfreeze(userId, Account.SPOT, symbol.getBaseCoin(),
-                    order.getAmount(), "spot", order.getOrderNo(), "限价卖单撤销退回");
+            Account acc = accountService.getOrCreate(userId, Account.SPOT, symbol.getBaseCoin());
+            BigDecimal calcUnfreeze = order.getAmount();
+            if (acc.getFrozen() != null && calcUnfreeze.compareTo(acc.getFrozen()) > 0) {
+                calcUnfreeze = acc.getFrozen();
+            }
+            if (calcUnfreeze.signum() > 0) {
+                accountService.unfreeze(userId, Account.SPOT, symbol.getBaseCoin(),
+                        calcUnfreeze, "spot", order.getOrderNo(), "限价卖单撤销退回");
+            }
         }
-        order.setStatus(SpotOrder.STATUS_CANCELLED);
-        order.setUpdatedAt(LocalDateTime.now());
-        orderMapper.updateById(order);
+    }
+
+    public List<SpotOrder> listPendingOrders(int limit) {
+        LambdaQueryWrapper<SpotOrder> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(SpotOrder::getStatus, SpotOrder.STATUS_PENDING)
+                .orderByAsc(SpotOrder::getCreatedAt)
+                .last("LIMIT " + Math.max(1, Math.min(limit, 500)));
+        return orderMapper.selectList(wrapper);
+    }
+
+    @Transactional
+    public void tryMatchPendingOrder(SpotOrder order) {
+        if (order == null || order.getStatus() != SpotOrder.STATUS_PENDING) {
+            return;
+        }
+        Symbol symbol = symbolService.findActiveBySymbol("spot", order.getSymbol());
+        if (symbol == null) {
+            return;
+        }
+        BigDecimal rawPrice = quoteRouterService.getLatestPrice(symbol);
+        if (rawPrice == null || rawPrice.signum() <= 0) {
+            return;
+        }
+        int pricePrecision = normalizePrecision(symbol.getPricePrecision(), 2);
+        int amountPrecision = normalizePrecision(symbol.getAmountPrecision(), 4);
+        BigDecimal currentPrice = offsetService.applyForUser(order.getUserId(), symbol.getSymbol(), rawPrice)
+                .setScale(pricePrecision, RoundingMode.HALF_UP);
+
+        BigDecimal limitPrice = order.getPrice();
+        if (limitPrice == null || limitPrice.signum() <= 0) {
+            return;
+        }
+        boolean marketable = order.getSide() == SpotOrder.SIDE_BUY
+                ? limitPrice.compareTo(currentPrice) >= 0
+                : limitPrice.compareTo(currentPrice) <= 0;
+        if (!marketable) {
+            return;
+        }
+
+        int updated = orderMapper.update(null, new LambdaUpdateWrapper<SpotOrder>()
+                .eq(SpotOrder::getId, order.getId())
+                .eq(SpotOrder::getStatus, SpotOrder.STATUS_PENDING)
+                .set(SpotOrder::getStatus, SpotOrder.STATUS_FILLED)
+                .set(SpotOrder::getUpdatedAt, LocalDateTime.now()));
+        if (updated == 0) {
+            return;
+        }
+
+        if (order.getSide() == SpotOrder.SIDE_BUY) {
+            String settleCoin = settlementCoin(symbol);
+            Account acc = accountService.getOrCreate(order.getUserId(), Account.SPOT, settleCoin);
+            BigDecimal calcUnfreeze = quoteToSettlement(symbol, order.getTotal());
+            if (acc.getFrozen() != null && calcUnfreeze.compareTo(acc.getFrozen()) > 0) {
+                calcUnfreeze = acc.getFrozen();
+            }
+            if (calcUnfreeze.signum() > 0) {
+                accountService.unfreeze(order.getUserId(), Account.SPOT, settleCoin,
+                        calcUnfreeze, "spot", order.getOrderNo(), "限价买单成交解冻");
+            }
+        } else {
+            Account acc = accountService.getOrCreate(order.getUserId(), Account.SPOT, symbol.getBaseCoin());
+            BigDecimal calcUnfreeze = order.getAmount();
+            if (acc.getFrozen() != null && calcUnfreeze.compareTo(acc.getFrozen()) > 0) {
+                calcUnfreeze = acc.getFrozen();
+            }
+            if (calcUnfreeze.signum() > 0) {
+                accountService.unfreeze(order.getUserId(), Account.SPOT, symbol.getBaseCoin(),
+                        calcUnfreeze, "spot", order.getOrderNo(), "限价卖单成交解冻");
+            }
+        }
+
+        fillOrder(order, symbol, currentPrice, amountPrecision);
     }
 
     public Page<SpotOrder> orderPage(Long userId, int pageNo, int pageSize,

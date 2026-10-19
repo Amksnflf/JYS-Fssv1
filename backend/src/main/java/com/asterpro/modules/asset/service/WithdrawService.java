@@ -15,6 +15,7 @@ import com.asterpro.modules.user.entity.UserSecurity;
 import com.asterpro.modules.user.mapper.UserSecurityMapper;
 import com.asterpro.common.util.PasswordUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -54,9 +55,9 @@ public class WithdrawService {
         if (!coinService.isSupportedChain(coinCode, orderChain)) {
             throw new BizException("Withdrawal network not supported"); // 提现网络不支持
         }
-//        if (!coinService.looksLikeChainAddress(orderChain, toAddress)) {
-//            throw new BizException("提现地址格式错误");
-//        }
+        if (!coinService.looksLikeChainAddress(orderChain, toAddress)) {
+            throw new BizException("Invalid withdrawal address format"); // 提现地址格式错误
+        }
 
         String trimmedAddress = toAddress.trim();
         UserAddress book = userAddressMapper.selectOne(new LambdaQueryWrapper<UserAddress>()
@@ -69,13 +70,13 @@ public class WithdrawService {
             throw new BizException("Please add this withdrawal address to address book first"); // 请先在地址簿中添加该提币地址
         }
 
-//        UserSecurity sec = securityMapper.selectById(userId);
-//        if (sec == null || StrUtil.isBlank(sec.getPayPassword())) {
-//            throw new BizException("请先设置交易密码");
-//        }
-//        if (StrUtil.isBlank(payPassword) || !PasswordUtil.matches(payPassword, sec.getPayPassword())) {
-//            throw new BizException(ResultCode.PAY_PWD_ERROR);
-//        }
+        UserSecurity sec = securityMapper.selectById(userId);
+        if (sec == null || StrUtil.isBlank(sec.getPayPassword())) {
+            throw new BizException("Please set transaction password first"); // 请先设置交易密码
+        }
+        if (StrUtil.isBlank(payPassword) || !PasswordUtil.matches(payPassword, sec.getPayPassword())) {
+            throw new BizException(ResultCode.PAY_PWD_ERROR);
+        }
 
         BigDecimal fee = coin.getWithdrawFee() == null ? BigDecimal.ZERO : coin.getWithdrawFee();
         BigDecimal total = amount.add(fee);
@@ -112,11 +113,16 @@ public class WithdrawService {
         WithdrawOrder o = mapper.selectById(orderId);
         if (o == null) throw new BizException(ResultCode.ORDER_NOT_EXIST);
         if (o.getStatus() == 2 || o.getStatus() == 3) throw new BizException("Order already in final state"); // 订单已终态
-        o.setStatus(2);
-        o.setTxHash(txHash);
-        o.setAuditedBy(auditorId);
-        o.setAuditedAt(LocalDateTime.now());
-        mapper.updateById(o);
+        int rows = mapper.update(null, new LambdaUpdateWrapper<WithdrawOrder>()
+                .eq(WithdrawOrder::getId, orderId)
+                .notIn(WithdrawOrder::getStatus, 2, 3)
+                .set(WithdrawOrder::getStatus, 2)
+                .set(WithdrawOrder::getTxHash, txHash)
+                .set(WithdrawOrder::getAuditedBy, auditorId)
+                .set(WithdrawOrder::getAuditedAt, LocalDateTime.now()));
+        if (rows == 0) {
+            throw new BizException("Order already in final state"); // 订单已终态
+        }
         BigDecimal total = o.getAmount().add(o.getFee() == null ? BigDecimal.ZERO : o.getFee());
         accountService.deductFrozen(o.getUserId(), Account.SPOT, o.getCoin(), total,
                 "withdraw", o.getOrderNo(), "提现打款完成");
@@ -128,11 +134,16 @@ public class WithdrawService {
         WithdrawOrder o = mapper.selectById(orderId);
         if (o == null) throw new BizException(ResultCode.ORDER_NOT_EXIST);
         if (o.getStatus() == 2 || o.getStatus() == 3) throw new BizException("Order already in final state"); // 订单已终态
-        o.setStatus(1);
-        o.setAuditRemark(remark);
-        o.setAuditedBy(auditorId);
-        o.setAuditedAt(LocalDateTime.now());
-        mapper.updateById(o);
+        int rows = mapper.update(null, new LambdaUpdateWrapper<WithdrawOrder>()
+                .eq(WithdrawOrder::getId, orderId)
+                .notIn(WithdrawOrder::getStatus, 2, 3)
+                .set(WithdrawOrder::getStatus, 1)
+                .set(WithdrawOrder::getAuditRemark, remark)
+                .set(WithdrawOrder::getAuditedBy, auditorId)
+                .set(WithdrawOrder::getAuditedAt, LocalDateTime.now()));
+        if (rows == 0) {
+            throw new BizException("Order already in final state"); // 订单已终态
+        }
     }
 
     /** 管理后台：驳回 → 退回资金 */
@@ -141,11 +152,16 @@ public class WithdrawService {
         WithdrawOrder o = mapper.selectById(orderId);
         if (o == null) throw new BizException(ResultCode.ORDER_NOT_EXIST);
         if (o.getStatus() == 2 || o.getStatus() == 3) throw new BizException("Order already in final state"); // 订单已终态
-        o.setStatus(3);
-        o.setAuditRemark(remark);
-        o.setAuditedBy(auditorId);
-        o.setAuditedAt(LocalDateTime.now());
-        mapper.updateById(o);
+        int rows = mapper.update(null, new LambdaUpdateWrapper<WithdrawOrder>()
+                .eq(WithdrawOrder::getId, orderId)
+                .notIn(WithdrawOrder::getStatus, 2, 3)
+                .set(WithdrawOrder::getStatus, 3)
+                .set(WithdrawOrder::getAuditRemark, remark)
+                .set(WithdrawOrder::getAuditedBy, auditorId)
+                .set(WithdrawOrder::getAuditedAt, LocalDateTime.now()));
+        if (rows == 0) {
+            throw new BizException("Order already in final state"); // 订单已终态
+        }
         BigDecimal back = o.getAmount().add(o.getFee() == null ? BigDecimal.ZERO : o.getFee());
         accountService.unfreeze(o.getUserId(), Account.SPOT, o.getCoin(), back,
                 "withdraw", o.getOrderNo(), "提现驳回解冻");

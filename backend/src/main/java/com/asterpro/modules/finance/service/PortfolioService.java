@@ -99,7 +99,12 @@ public class PortfolioService {
             throw new BizException("Current status cannot be redeemed"); // 当前状态不可赎回
         }
         boolean matured = o.getEndAt() != null && !LocalDateTime.now().isBefore(o.getEndAt());
-        BigDecimal profit = matured ? computeProfit(o) : BigDecimal.ZERO;
+        BigDecimal profit;
+        if (o.getTotalProfit() != null && o.getTotalProfit().signum() > 0) {
+            profit = o.getTotalProfit();
+        } else {
+            profit = matured ? computeProfit(o) : BigDecimal.ZERO;
+        }
         int rows = orderMapper.update(null, new LambdaUpdateWrapper<PortfolioOrder>()
                 .eq(PortfolioOrder::getId, o.getId())
                 .eq(PortfolioOrder::getStatus, PortfolioOrder.STATUS_HOLDING)
@@ -129,7 +134,9 @@ public class PortfolioService {
         int n = 0;
         for (PortfolioOrder o : rows) {
             try {
-                BigDecimal profit = computeProfit(o);
+                BigDecimal profit = (o.getTotalProfit() != null && o.getTotalProfit().signum() > 0)
+                        ? o.getTotalProfit()
+                        : computeProfit(o);
                 int updated = orderMapper.update(null, new LambdaUpdateWrapper<PortfolioOrder>()
                         .eq(PortfolioOrder::getId, o.getId())
                         .eq(PortfolioOrder::getStatus, PortfolioOrder.STATUS_HOLDING)
@@ -150,6 +157,7 @@ public class PortfolioService {
     /** 实时收益（按已持有天数比例） */
     public BigDecimal liveProfit(PortfolioOrder o) {
         if (o.getStatus() != PortfolioOrder.STATUS_HOLDING) return o.getTotalProfit();
+        if (o.getTotalProfit() != null && o.getTotalProfit().signum() > 0) return o.getTotalProfit();
         return computeProfit(o);
     }
 

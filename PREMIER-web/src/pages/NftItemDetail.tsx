@@ -6,10 +6,13 @@ import { Link, Navigate, useLocation, useNavigate, useParams } from 'react-route
 import PageHeader from '@/components/PageHeader';
 import { toast } from '@/components/Toast';
 import { buyNft, fetchNftCollectionDetail, fetchNftItemDetail, type NftCollection, type NftItem } from '@/api/nft';
+import { fetchOverviewCached } from '@/api/asset';
 import { parseTraits } from '@/data/nftDisplay';
 import { NftVisual, SectionTitle, Verified } from './Nft';
 import { useResponsive } from '@/hooks/useResponsive';
 import { PcContainer, PcDialog } from '@/components/pc';
+import { useUserStore } from '@/store/userStore';
+import { maskSensitiveText } from '@/utils/secureStorage';
 
 type RouteState = {
   item?: NftItem;
@@ -23,12 +26,26 @@ export default function NftItemDetailPage() {
   const state = useLocation().state as RouteState | null;
   const nav = useNavigate();
   const { isPc } = useResponsive();
+  const user = useUserStore((s) => s.user);
+  const token = useUserStore((s) => s.token);
   const [collection, setCollection] = useState<NftCollection | undefined>(state?.collection);
   const [item, setItem] = useState<NftItem | undefined>(state?.item);
   const [loading, setLoading] = useState(!state?.item);
   const [loadError, setLoadError] = useState(false);
   const [payOpen, setPayOpen] = useState(false);
   const [buying, setBuying] = useState(false);
+  const [usdtBalance, setUsdtBalance] = useState('0');
+
+  useEffect(() => {
+    if (!token) return;
+    fetchOverviewCached()
+      .then((overview) => {
+        const spotUsdt = overview?.accounts?.find((a) => a.accountType === 1 && a.coin === 'USDT');
+        const summaryUsdt = overview?.coinSummary?.find((a) => a.coin === 'USDT');
+        setUsdtBalance(spotUsdt?.available ?? summaryUsdt?.available ?? '0');
+      })
+      .catch(() => undefined);
+  }, [token, payOpen]);
 
   useEffect(() => {
     if (!Number.isFinite(itemId)) return;
@@ -76,6 +93,8 @@ export default function NftItemDetailPage() {
   }
   const target = item;
   const traits = parseTraits(target.attributesJson);
+  const rawAccount = user?.account || user?.nickname || user?.uid || '--';
+  const maskedAccount = maskSensitiveText(rawAccount) || rawAccount;
 
   const buy = async () => {
     setBuying(true);
@@ -237,8 +256,19 @@ export default function NftItemDetailPage() {
               <div className="h-20 w-20 overflow-hidden rounded-full bg-[#ffc72c]">
                 <NftVisual name={collection?.name ?? target.name} />
               </div>
-              <div className="mt-4 text-2xl font-black">{t('nft.balance')}：0<span className="text-[#2f7d32]">₮</span></div>
-              <div className="mt-2 flex items-center text-2xl">test04***st0430 <Copy size={17} className="ml-1 text-textSub" /></div>
+              <div className="mt-4 text-2xl font-black">{t('nft.balance')}：{usdtBalance}<span className="text-[#2f7d32]">₮</span></div>
+              <button
+                type="button"
+                onClick={() => {
+                  if (user?.uid || user?.account) {
+                    navigator.clipboard.writeText(user?.account || user?.uid || '');
+                    toast.success(t('common.copied'));
+                  }
+                }}
+                className="mt-2 flex items-center text-2xl"
+              >
+                {maskedAccount} <Copy size={17} className="ml-1 text-textSub" />
+              </button>
             </div>
             <div className="mt-4 flex items-center gap-3">
               <div className="h-16 w-16 overflow-hidden">

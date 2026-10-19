@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import PageHeader from '@/components/PageHeader';
 import { toast } from '@/components/Toast';
 import { AsterSelect } from '@/components/AsterUI';
@@ -29,6 +29,8 @@ const STATUS_LABEL: Record<number, string> = {
 
 export default function WithdrawPage() {
   const { t } = useTranslation();
+  const [searchParams] = useSearchParams();
+  const coinParam = searchParams.get('coin')?.trim().toUpperCase();
   const user = useUserStore((s) => s.user);
   const refreshUser = useUserStore((s) => s.refresh);
   const [coins, setCoins] = useState<CoinInfo[]>(
@@ -36,16 +38,22 @@ export default function WithdrawPage() {
   );
   const [depositChains, setDepositChains] = useState<DepositAddress[]>([]);
   const [addressList, setAddressList] = useState<AddressItem[]>([]);
-  const [coin, setCoin] = useState('USDT');
+  const [coin, setCoin] = useState(() => coinParam || 'USDT');
   const [chain, setChain] = useState('');
   const [amount, setAmount] = useState('');
   const [addr, setAddr] = useState('');
   const [memo, setMemo] = useState('');
-  // const [pwd, setPwd] = useState('');
+  const [pwd, setPwd] = useState('');
   const [available, setAvailable] = useState('0');
   const [orders, setOrders] = useState<WithdrawOrder[]>([]);
   const [loading, setLoading] = useState(false);
   const { overview, refresh: refreshOverview } = useAssetOverview();
+
+  useEffect(() => {
+    if (coinParam && coinParam !== coin) {
+      setCoin(coinParam);
+    }
+  }, [coinParam]);
 
   useEffect(() => {
     fetchCoinListCached()
@@ -111,8 +119,8 @@ export default function WithdrawPage() {
   const onSubmit = async () => {
     if (!addr.trim()) return toast.error(t('asset.addressPlaceholder'));
     if (!amount || Number(amount) <= 0) return toast.error(t('asset.amountPlaceholder'));
-    // if (!user?.payPwdSet) return toast.error(t('asset.payPwdNotSet'));
-    // if (!pwd) return toast.error(t('asset.payPwdPlaceholder'));
+    if (!user?.payPwdSet) return toast.error(t('asset.payPwdNotSet'));
+    if (!pwd.trim()) return toast.error(t('asset.payPwdPlaceholder'));
     setLoading(true);
     try {
       await submitWithdraw({
@@ -121,13 +129,13 @@ export default function WithdrawPage() {
         amount: typeof amount === 'string' ? amount.trim() : amount,
         toAddress: addr.trim(),
         memo: selectedAddress?.memo || memo,
-        // payPassword: pwd,
+        payPassword: pwd.trim(),
       });
       toast.success(t('common.submit'));
       setAmount('');
       setAddr('');
       setMemo('');
-      // setPwd('');
+      setPwd('');
       loadOrders();
       void refreshOverview(true).catch(() => undefined);
     } catch (e) {
@@ -238,7 +246,6 @@ export default function WithdrawPage() {
           )}
         </Field>
 
-        {/* 交易密码字段 - 已注释
         <Field label={t('asset.payPwd')}>
           {!user?.payPwdSet && (
             <div className="mb-2 flex items-center justify-between gap-3 rounded-lg bg-[#FFF7E8] px-3 py-2 text-xs text-[#9A5A00]">
@@ -250,13 +257,14 @@ export default function WithdrawPage() {
           )}
           <input
             type="password"
+            inputMode="numeric"
+            maxLength={6}
             value={pwd}
             onChange={(e) => setPwd(e.target.value)}
             placeholder={t('asset.payPwdPlaceholder')}
             className="w-full h-11 bg-bgSoft rounded-lg px-3 text-sm outline-none"
           />
         </Field>
-        */}
 
         <button
           disabled={loading}

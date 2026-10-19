@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { usePage } from '@/utils/usePage';
 import http from '@/api/http';
 import { exportCsv } from '@/utils/exportCsv';
+import { resolveImageUrl } from '@/utils/url';
 
 interface Kyc {
   id: number;
@@ -14,6 +15,7 @@ interface Kyc {
   idNo?: string;
   idFrontUrl?: string;
   idBackUrl?: string;
+  idHoldUrl?: string;
   faceUrl?: string;
   auditStatus: number;
   auditRemark?: string;
@@ -137,9 +139,9 @@ export default function KycAuditPage() {
               用户：{picked.userId} · 姓名：{picked.realName} · 证件：{picked.idType} {picked.idNo}
             </p>
             <Space size="large" wrap style={{ marginBottom: 12 }}>
-              {picked.idFrontUrl && <Image src={picked.idFrontUrl} width={200} alt="正面" />}
-              {picked.idBackUrl && <Image src={picked.idBackUrl} width={200} alt="背面" />}
-              {picked.faceUrl && <Image src={picked.faceUrl} width={200} alt="人脸" />}
+              {picked.idFrontUrl && <Image src={resolveImageUrl(picked.idFrontUrl)} width={200} alt="正面" />}
+              {picked.idBackUrl && <Image src={resolveImageUrl(picked.idBackUrl)} width={200} alt="背面" />}
+              {(picked.idHoldUrl || picked.faceUrl) && <Image src={resolveImageUrl(picked.idHoldUrl || picked.faceUrl)} width={200} alt="人脸" />}
             </Space>
             {picked.auditStatus === 0 ? (
               <Form form={form} layout="vertical" onFinish={submit}>

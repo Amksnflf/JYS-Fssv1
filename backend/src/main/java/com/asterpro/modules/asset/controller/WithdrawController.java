@@ -51,7 +51,7 @@ public class WithdrawController {
         @NotBlank(message = "提现地址不能为空")
         private String toAddress;
         private String memo;
-//        @NotBlank(message = "交易密码不能为空")
+        @NotBlank(message = "交易密码不能为空")
         private String payPassword;
     }
 }

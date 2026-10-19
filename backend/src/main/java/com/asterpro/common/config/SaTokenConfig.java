@@ -39,6 +39,8 @@ public class SaTokenConfig implements WebMvcConfigurer {
                 .notMatch(
                     "/auth/**",
                     "/public/**",
+                    "/asset/coin/list",
+                    "/finance/loan/estimate",
                     "/support/public/**",
                     "/public/support/**",
                     "/announcement/public/**",

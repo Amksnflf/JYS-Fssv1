@@ -112,7 +112,9 @@ public class LockService {
         }
 
         BigDecimal interest = BigDecimal.ZERO;
-        if (matured) {
+        if (o.getInterest() != null && o.getInterest().signum() > 0) {
+            interest = o.getInterest();
+        } else if (matured) {
             interest = computeInterest(o, LocalDateTime.now());
         }
         int rows = orderMapper.update(null, new LambdaUpdateWrapper<LockOrder>()
@@ -146,7 +148,9 @@ public class LockService {
         int n = 0;
         for (LockOrder o : rows) {
             try {
-                BigDecimal interest = computeInterest(o, o.getEndAt());
+                BigDecimal interest = (o.getInterest() != null && o.getInterest().signum() > 0)
+                        ? o.getInterest()
+                        : computeInterest(o, o.getEndAt());
                 int updated = orderMapper.update(null, new LambdaUpdateWrapper<LockOrder>()
                         .eq(LockOrder::getId, o.getId())
                         .eq(LockOrder::getStatus, LockOrder.STATUS_HOLDING)
@@ -167,6 +171,7 @@ public class LockService {
     /** 仍在持有的实时利息（用于前端展示，未落库） */
     public BigDecimal liveInterest(LockOrder o) {
         if (o.getStatus() != LockOrder.STATUS_HOLDING) return o.getInterest();
+        if (o.getInterest() != null && o.getInterest().signum() > 0) return o.getInterest();
         return computeInterest(o, LocalDateTime.now());
     }
 

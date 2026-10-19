@@ -1,26 +1,20 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="asterAdminMarkTitle">
-  <title id="asterAdminMarkTitle">Astrelvion brand mark</title>
+<svg width="256" height="256" viewBox="0 0 96 96" fill="none" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <linearGradient id="adminBg" x1="36" y1="28" x2="220" y2="228" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#16264D" />
-      <stop offset="0.58" stop-color="#0D1832" />
-      <stop offset="1" stop-color="#050A16" />
+    <linearGradient id="premier_grad_main" x1="12" y1="10" x2="84" y2="86" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#22E6B8"/>
+      <stop offset="50%" stop-color="#00C4DF"/>
+      <stop offset="100%" stop-color="#0284C7"/>
     </linearGradient>
-    <linearGradient id="adminGold" x1="74" y1="66" x2="186" y2="192" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#FFF3C8" />
-      <stop offset="0.4" stop-color="#F2D487" />
-      <stop offset="1" stop-color="#C8891D" />
+    <linearGradient id="premier_grad_accent" x1="80" y1="16" x2="24" y2="80" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#38BDF8"/>
+      <stop offset="100%" stop-color="#0369A1"/>
     </linearGradient>
-    <radialGradient id="adminGlow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(196 58) rotate(123) scale(102 96)">
-      <stop offset="0" stop-color="#FFE8A8" stop-opacity="0.58" />
-      <stop offset="1" stop-color="#FFE8A8" stop-opacity="0" />
-    </radialGradient>
   </defs>
-  <rect x="12" y="12" width="232" height="232" rx="64" fill="url(#adminBg)" />
-  <rect x="13" y="13" width="230" height="230" rx="63" fill="none" stroke="#FFFFFF" stroke-opacity="0.08" />
-  <circle cx="196" cy="58" r="68" fill="url(#adminGlow)" />
-  <path d="M128 56 57 192h33l14-28h48l14 28h33L128 56Z" fill="url(#adminGold)" />
-  <path d="M128 102 109 140h38l-19-38Z" fill="url(#adminBg)" />
-  <path d="M95 148h87l-22 18H84l11-18Z" fill="#FFF2C8" />
-  <path d="m190 46 6.4 15.6L212 68l-15.6 6.4L190 90l-6.4-15.6L168 68l15.6-6.4L190 46Z" fill="#FFE8A8" />
+  <!-- Outer hexagonal shield frame -->
+  <path d="M48 6L84 26.8V69.2L48 90L12 69.2V26.8L48 6Z" fill="url(#premier_grad_main)" fill-opacity="0.12" stroke="url(#premier_grad_main)" stroke-width="4" stroke-linejoin="round"/>
+  <!-- Geometric 3D 'P' Monogram + Ascending Arrow -->
+  <path d="M30 25H54.5C64.165 25 71 31.4919 71 40.5C71 49.5081 64.165 56 54.5 56H42V73H30V25ZM42 35.5V45.5H53.5C57.366 45.5 60 43.4853 60 40.5C60 37.5147 57.366 35.5 53.5 35.5H42Z" fill="url(#premier_grad_main)"/>
+  <!-- Dynamic ascending wing accent -->
+  <path d="M47 62L66 49L58 73H47V62Z" fill="url(#premier_grad_accent)"/>
+  <circle cx="65" cy="24" r="4" fill="#22E6B8"/>
 </svg>

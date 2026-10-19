@@ -50,8 +50,23 @@ public class KycService {
     }
 
     public List<UserKyc> myKyc(Long userId) {
-        return kycMapper.selectList(new LambdaQueryWrapper<UserKyc>()
+        List<UserKyc> list = kycMapper.selectList(new LambdaQueryWrapper<UserKyc>()
                 .eq(UserKyc::getUserId, userId)
                 .orderByDesc(UserKyc::getId));
+        for (UserKyc item : list) {
+            if (item != null && StrUtil.isNotBlank(item.getIdNo())) {
+                item.setIdNo(maskIdNo(item.getIdNo()));
+            }
+        }
+        return list;
+    }
+
+    private String maskIdNo(String idNo) {
+        if (idNo == null || idNo.isBlank()) return idNo;
+        String s = idNo.trim();
+        if (s.length() <= 6) {
+            return s.charAt(0) + "****" + s.charAt(s.length() - 1);
+        }
+        return s.substring(0, 3) + "***********" + s.substring(s.length() - 3);
     }
 }

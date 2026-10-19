@@ -25,7 +25,8 @@ public class StaticResourceConfig implements WebMvcConfigurer {
             resourceLocation = resourceLocation + "/";
         }
         registry.addResourceHandler(publicPath + "/**")
-                .addResourceLocations(resourceLocation);
+                .addResourceLocations(resourceLocation)
+                .setCachePeriod(2592000);
     }
 
     private String normalizePublicPath(String value) {

@@ -25,7 +25,7 @@ type AgreementCopy = {
 const zhCNDocuments: LegalDocumentLocale = {
   terms: {
     title: '服务条款',
-    intro: '本服务条款适用于您使用 CoinEx 提供的网站、移动端页面、钱包登录以及相关交易与账户服务。',
+    intro: '本服务条款适用于您使用 PREMIER 提供的网站、移动端页面、钱包登录以及相关交易与账户服务。',
     updatedAt: '最后更新：2026-06-10',
     sections: [
       {
@@ -60,7 +60,7 @@ const zhCNDocuments: LegalDocumentLocale = {
   },
   privacy: {
     title: '隐私协议',
-    intro: '本隐私协议用于说明 CoinEx 如何收集、使用、保存、共享和保护您的个人信息及设备信息。',
+    intro: '本隐私协议用于说明 PREMIER 如何收集、使用、保存、共享和保护您的个人信息及设备信息。',
     updatedAt: '最后更新：2026-06-10',
     sections: [
       {
@@ -95,7 +95,7 @@ const zhCNDocuments: LegalDocumentLocale = {
   },
   aml: {
     title: '反洗钱协议',
-    intro: '本反洗钱协议用于说明 CoinEx 在客户识别、交易监测、风险审查及可疑行为处置方面的基本规则。',
+    intro: '本反洗钱协议用于说明 PREMIER 在客户识别、交易监测、风险审查及可疑行为处置方面的基本规则。',
     updatedAt: '最后更新：2026-06-10',
     sections: [
       {
@@ -133,7 +133,7 @@ const zhCNDocuments: LegalDocumentLocale = {
 const zhTWDocuments: LegalDocumentLocale = {
   terms: {
     title: '服務條款',
-    intro: '本服務條款適用於您使用 CoinEx 提供的網站、行動端頁面、錢包登入以及相關交易與帳戶服務。',
+    intro: '本服務條款適用於您使用 PREMIER 提供的網站、行動端頁面、錢包登入以及相關交易與帳戶服務。',
     updatedAt: '最後更新：2026-06-10',
     sections: [
       {
@@ -168,7 +168,7 @@ const zhTWDocuments: LegalDocumentLocale = {
   },
   privacy: {
     title: '隱私協議',
-    intro: '本隱私協議用於說明 CoinEx 如何蒐集、使用、保存、共享與保護您的個人資訊及設備資訊。',
+    intro: '本隱私協議用於說明 PREMIER 如何蒐集、使用、保存、共享與保護您的個人資訊及設備資訊。',
     updatedAt: '最後更新：2026-06-10',
     sections: [
       {
@@ -203,7 +203,7 @@ const zhTWDocuments: LegalDocumentLocale = {
   },
   aml: {
     title: '反洗錢協議',
-    intro: '本反洗錢協議用於說明 CoinEx 在客戶識別、交易監測、風險審查及可疑行為處置方面的基本規則。',
+    intro: '本反洗錢協議用於說明 PREMIER 在客戶識別、交易監測、風險審查及可疑行為處置方面的基本規則。',
     updatedAt: '最後更新：2026-06-10',
     sections: [
       {
@@ -241,7 +241,7 @@ const zhTWDocuments: LegalDocumentLocale = {
 const enDocuments: LegalDocumentLocale = {
   terms: {
     title: 'Terms of Service',
-    intro: 'These Terms of Service apply to your use of the CoinEx website, mobile pages, wallet login flow, and related account and trading services.',
+    intro: 'These Terms of Service apply to your use of the PREMIER website, mobile pages, wallet login flow, and related account and trading services.',
     updatedAt: 'Last updated: 2026-06-10',
     sections: [
       {
@@ -276,7 +276,7 @@ const enDocuments: LegalDocumentLocale = {
   },
   privacy: {
     title: 'Privacy Policy',
-    intro: 'This Privacy Policy explains how CoinEx collects, uses, stores, shares, and protects your personal and device information.',
+    intro: 'This Privacy Policy explains how PREMIER collects, uses, stores, shares, and protects your personal and device information.',
     updatedAt: 'Last updated: 2026-06-10',
     sections: [
       {
@@ -311,7 +311,7 @@ const enDocuments: LegalDocumentLocale = {
   },
   aml: {
     title: 'AML Policy',
-    intro: 'This AML Policy explains the basic rules CoinEx applies to customer due diligence, transaction monitoring, risk review, and suspicious-activity handling.',
+    intro: 'This AML Policy explains the basic rules PREMIER applies to customer due diligence, transaction monitoring, risk review, and suspicious-activity handling.',
     updatedAt: 'Last updated: 2026-06-10',
     sections: [
       {

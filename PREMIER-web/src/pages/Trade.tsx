@@ -70,6 +70,7 @@ export default function TradePage() {
   const symbolParam = searchParams.get('symbol')?.toUpperCase();
   const codeParam = searchParams.get('code');
   const categoryParam = searchParams.get('category') || 'crypto';
+  const sideParam = searchParams.get('side')?.toLowerCase();
 
   const [symbols, setSymbols] = useState<SymbolRow[]>([]);
   const [current, setCurrent] = useState<SymbolRow | null>(null);
@@ -107,7 +108,16 @@ export default function TradePage() {
   const [stats24h, setStats24h] = useState<QuoteStats24h | null>(null);
   const [latestTrades, setLatestTrades] = useState<QuoteTrade[]>([]);
 
-  const [side, setSide] = useState<1 | 2>(1);
+  const [side, setSide] = useState<1 | 2>(() =>
+    sideParam === 'sell' || sideParam === '2' ? 2 : 1
+  );
+  useEffect(() => {
+    if (sideParam === 'sell' || sideParam === '2') {
+      setSide(2);
+    } else if (sideParam === 'buy' || sideParam === '1') {
+      setSide(1);
+    }
+  }, [sideParam]);
   const [orderType, setOrderType] = useState<1 | 2>(2);
   const [priceInput, setPriceInput] = useState('');
   const [amountInput, setAmountInput] = useState('');
@@ -903,6 +913,7 @@ export default function TradePage() {
               <Orderbook
                 price={livePriceNum}
                 precision={precision}
+                precisionStep={bookPrecisionStep}
                 baseCoin={baseCoin}
                 quoteCoin={quoteCoin}
                 depth={depth}

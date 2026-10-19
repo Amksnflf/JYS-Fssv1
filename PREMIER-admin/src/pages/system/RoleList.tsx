@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { App, Button, Form, Input, Modal, Popconfirm, Space, Table } from 'antd';
+import { App, Button, Checkbox, Form, Input, Modal, Popconfirm, Space, Table } from 'antd';
 import http from '@/api/http';
 
 interface AdminRole {
@@ -10,9 +10,10 @@ interface AdminRole {
   createdAt?: string;
 }
 
-const DEFAULT_PERMISSIONS = [
+const ALL_PERMISSION_ITEMS = [
   '*',
   'dashboard:view',
+  'user:*',
   'user:view',
   'user:kyc',
   'user:security',
@@ -27,6 +28,8 @@ const DEFAULT_PERMISSIONS = [
   'control:offset',
   'control:winrate',
   'content:*',
+  'content:coin',
+  'content:symbol',
   'content:feedback',
   'support:view',
   'support:reply',
@@ -35,15 +38,30 @@ const DEFAULT_PERMISSIONS = [
   'report:view',
   'finance-control:*',
   'ops:*',
+  'ops:loan',
+  'ops:nft',
+  'ops:follow',
+  'ops:dynamic',
+  'ops:risk',
+  'ops:i18n',
+  'ops:config',
   'system:*',
   'system:log',
-].join('\n');
+];
+
+const DEFAULT_PERMISSIONS = ALL_PERMISSION_ITEMS.join('\n');
 
 export default function RoleListPage() {
   const [data, setData] = useState<AdminRole[]>([]);
   const [open, setOpen] = useState(false);
   const [form] = Form.useForm();
   const { message } = App.useApp();
+  const permissionsText = Form.useWatch('permissionsText', form);
+
+  const selectedPermissions = String(permissionsText ?? '')
+    .split('\n')
+    .map((x) => x.trim())
+    .filter(Boolean);
 
   const load = async () => {
     const rs = await http.get<AdminRole[], AdminRole[]>('/admin/system/role/list');
@@ -139,6 +157,16 @@ export default function RoleListPage() {
             <Form.Item name="name" label="名称" rules={[{ required: true }]}><Input style={{ width: 220 }} /></Form.Item>
             <Form.Item name="code" label="编码" rules={[{ required: true }]}><Input style={{ width: 220 }} /></Form.Item>
           </Space>
+          <Form.Item label="快捷勾选权限">
+            <Checkbox.Group
+              options={ALL_PERMISSION_ITEMS.map((p) => ({ label: p, value: p }))}
+              value={selectedPermissions.filter((p) => ALL_PERMISSION_ITEMS.includes(p))}
+              onChange={(checked) => {
+                const custom = selectedPermissions.filter((p) => !ALL_PERMISSION_ITEMS.includes(p));
+                form.setFieldsValue({ permissionsText: [...(checked as string[]), ...custom].join('\n') });
+              }}
+            />
+          </Form.Item>
           <Form.Item name="permissionsText" label="权限（每行一个）">
             <Input.TextArea rows={10} />
           </Form.Item>

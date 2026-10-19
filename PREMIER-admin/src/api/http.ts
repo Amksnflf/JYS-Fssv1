@@ -1,5 +1,6 @@
 import axios, { type AxiosResponse } from 'axios';
 import { message } from 'antd';
+import { secureStorage } from '@/utils/secureStorage';
 
 export const TOKEN_KEY = 'aster_admin_token';
 export const TOKEN_NAME_KEY = 'aster_admin_token_name';
@@ -15,8 +16,8 @@ function adminLoginPath() {
 }
 
 http.interceptors.request.use((cfg) => {
-  const token = localStorage.getItem(TOKEN_KEY);
-  const name = localStorage.getItem(TOKEN_NAME_KEY) || 'Admin-Authorization';
+  const token = secureStorage.getItem(TOKEN_KEY);
+  const name = secureStorage.getItem(TOKEN_NAME_KEY) || 'Admin-Authorization';
   if (token && cfg.headers) {
     cfg.headers[name] = token;
   }
@@ -30,8 +31,8 @@ http.interceptors.response.use(
       if (body.code === 0) return body.data;
       // 未登录 / 过期
       if (body.code === 401 || body.code === 11001 || body.code === 11012) {
-        localStorage.removeItem(TOKEN_KEY);
-        localStorage.removeItem(TOKEN_NAME_KEY);
+        secureStorage.removeItem(TOKEN_KEY);
+        secureStorage.removeItem(TOKEN_NAME_KEY);
         if (!location.pathname.endsWith('/login')) {
           location.href = adminLoginPath();
         }
@@ -44,8 +45,8 @@ http.interceptors.response.use(
   (err) => {
     const body = err.response?.data;
     if (err.response?.status === 401) {
-      localStorage.removeItem(TOKEN_KEY);
-      localStorage.removeItem(TOKEN_NAME_KEY);
+      secureStorage.removeItem(TOKEN_KEY);
+      secureStorage.removeItem(TOKEN_NAME_KEY);
       if (!location.pathname.endsWith('/login')) {
         location.href = adminLoginPath();
       }

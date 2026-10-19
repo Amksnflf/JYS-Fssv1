@@ -3,6 +3,7 @@ package com.asterpro.modules.admin.controller;
 import com.asterpro.common.api.R;
 import com.asterpro.common.exception.BizException;
 import com.asterpro.common.util.PasswordUtil;
+import com.asterpro.modules.admin.auth.StpAdminUtil;
 import com.asterpro.modules.admin.entity.AdminRole;
 import com.asterpro.modules.admin.entity.AdminUser;
 import com.asterpro.modules.admin.mapper.AdminRoleMapper;
@@ -72,6 +73,9 @@ public class AdminSystemController {
                 u.setPassword(PasswordUtil.hash(dto.getPassword()));
             }
             adminUserMapper.updateById(u);
+            if (dto.getStatus() != null && dto.getStatus() == 0) {
+                StpAdminUtil.kickout(dto.getId());
+            }
         } else {
             if (dto.getPassword() == null || dto.getPassword().isBlank()) {
                 throw new BizException("Password is required for new admin"); // 新增管理员必须设置密码
@@ -105,6 +109,9 @@ public class AdminSystemController {
         if (u == null) return R.fail("管理员不存在");
         u.setStatus(dto.getStatus());
         adminUserMapper.updateById(u);
+        if (dto.getStatus() == 0) {
+            StpAdminUtil.kickout(id);
+        }
         logService.log(opId, "system", "admin_status",
                 "admin_user", String.valueOf(id), String.valueOf(dto.getStatus()));
         permissionService.clearPermissionCache(id);

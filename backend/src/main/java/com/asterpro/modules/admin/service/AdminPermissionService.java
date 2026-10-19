@@ -27,7 +27,10 @@ public class AdminPermissionService {
 
     private static final List<String> AUTHENTICATED_PATHS = List.of(
             "/admin/auth/me",
-            "/admin/auth/logout"
+            "/admin/auth/logout",
+            "/admin/content/coin/list",
+            "/admin/content/symbol/list",
+            "/admin/upload/**"
     );
 
     private static final List<Map.Entry<String, String>> PATH_PERMISSIONS = List.of(
@@ -106,7 +109,7 @@ public class AdminPermissionService {
     }
 
     public Set<String> permissionsOf(AdminUser user) {
-        if (user == null || user.getRoleId() == null) return Set.of();
+        if (user == null || (user.getStatus() != null && user.getStatus() == 0) || user.getRoleId() == null) return Set.of();
         AdminRole role = roleMapper.selectById(user.getRoleId());
         if (role == null) return Set.of();
         return parsePermissions(role.getPermissions());

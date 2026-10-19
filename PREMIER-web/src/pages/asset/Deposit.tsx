@@ -325,7 +325,9 @@ function DepositDetail({ initialCoin, initialChain }: { initialCoin: string; ini
       .then((rows) => {
         const list = rows ?? [];
         setAddrList(list);
-        if (!chain && list.length) setChain(list[0].chain);
+        if (list.length && (!chain || !list.some((item) => item.chain === chain))) {
+          setChain(list[0].chain);
+        }
       })
       .catch(() => setAddrList([]));
   }, [coin, chain]);
@@ -381,7 +383,7 @@ function DepositDetail({ initialCoin, initialChain }: { initialCoin: string; ini
     try {
       await submitDeposit({
         coin,
-        chain,
+        chain: addr.chain || chain,
         amount,
         txHash: txHash.trim() || '-',
         fromAddress: fromAddr || '-',
@@ -405,7 +407,7 @@ function DepositDetail({ initialCoin, initialChain }: { initialCoin: string; ini
     try {
       const order = await createUdunDepositOrder({
         coin,
-        chain,
+        chain: addr?.chain || chain,
         amount: amount || undefined,
       });
       setUdunOrder(order);
@@ -487,7 +489,7 @@ function DepositDetail({ initialCoin, initialChain }: { initialCoin: string; ini
                 <Field label={t('asset.depositAddress')}>
                   <div className="rounded-xl border border-primary/20 bg-gradient-to-b from-primary/5 to-transparent p-3.5">
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-[11px] font-bold text-primary">{chain} 网络充值地址</span>
+                      <span className="text-[11px] font-bold text-primary">{addr.chain || chain} 网络充值地址</span>
                       {selected && (
                         <span className="text-[10px] text-textSub">
                           {t('asset.minDeposit')}: {selected.minDeposit} {selected.code}

@@ -87,10 +87,14 @@ public class AdminContentController {
         if (category != null && !category.isBlank()) w.eq(Symbol::getCategory, category);
         w.orderByAsc(Symbol::getSort).orderByAsc(Symbol::getSymbol).orderByAsc(Symbol::getTradeType);
 
+        List<Symbol> allSymbols = symbolMapper.selectList(w);
         Map<String, SymbolProductDTO> grouped = new LinkedHashMap<>();
-        for (Symbol s : symbolMapper.selectList(w)) {
-            SymbolProductDTO dto = grouped.computeIfAbsent(s.getSymbol(), key -> fromSymbol(s));
-            dto.setEnabled(0);
+        for (Symbol s : allSymbols) {
+            SymbolProductDTO dto = grouped.computeIfAbsent(s.getSymbol(), key -> {
+                SymbolProductDTO init = fromSymbol(s);
+                init.setEnabled(0);
+                return init;
+            });
             if (Integer.valueOf(1).equals(s.getEnabled())) {
                 dto.setEnabled(1);
                 switch (s.getTradeType()) {
@@ -101,11 +105,18 @@ public class AdminContentController {
                 }
             }
         }
-        List<SymbolProductDTO> visible = new ArrayList<>();
-        for (SymbolProductDTO dto : grouped.values()) {
-            if (dto.getEnabled() != null && dto.getEnabled() == 1) visible.add(dto);
+        for (Symbol s : allSymbols) {
+            SymbolProductDTO dto = grouped.get(s.getSymbol());
+            if (dto != null && (dto.getEnabled() == null || dto.getEnabled() == 0)) {
+                switch (s.getTradeType()) {
+                    case "spot" -> dto.setSupportSpot(true);
+                    case "perp" -> dto.setSupportPerp(true);
+                    case "option" -> dto.setSupportOption(true);
+                    default -> { }
+                }
+            }
         }
-        return R.ok(visible);
+        return R.ok(new ArrayList<>(grouped.values()));
     }
 
     @GetMapping("/symbol/quote/check")

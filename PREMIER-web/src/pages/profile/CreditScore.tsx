@@ -51,7 +51,7 @@ export default function CreditScorePage() {
           {t('credit.title', '信用安全分')}
         </div>
         <button
-          onClick={() => toast.info('CoinEx 7×24小时安全风控中心全天候保护您的资产')}
+          onClick={() => toast.info('PREMIER 7×24小时安全风控中心全天候保护您的资产')}
           className="flex h-9 w-9 items-center justify-center rounded-xl text-slate-500 hover:bg-slate-100 transition cursor-pointer"
           aria-label="support"
           title="安全中心说明"
@@ -195,7 +195,7 @@ export default function CreditScorePage() {
                 <span>安全基金赔付</span>
               </div>
               <p className="mt-1.5 text-[11px] text-slate-500 leading-relaxed">
-                纳入 CoinEx 100% 储备金计划，财产高枕无忧
+                纳入 PREMIER 100% 储备金计划，财产高枕无忧
               </p>
             </div>
           </div>

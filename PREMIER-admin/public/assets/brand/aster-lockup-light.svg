@@ -1,0 +1,23 @@
+<svg width="360" height="92" viewBox="0 0 360 92" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="premier_light_main" x1="10" y1="8" x2="82" y2="84" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#22E6B8"/>
+      <stop offset="50%" stop-color="#00C4DF"/>
+      <stop offset="100%" stop-color="#0284C7"/>
+    </linearGradient>
+    <linearGradient id="premier_light_sub" x1="78" y1="14" x2="22" y2="78" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#38BDF8"/>
+      <stop offset="100%" stop-color="#0369A1"/>
+    </linearGradient>
+  </defs>
+  <!-- Brand Emblem -->
+  <g transform="translate(2, 0)">
+    <path d="M44 8L77 27V65L44 84L11 65V27L44 8Z" fill="url(#premier_light_main)" fill-opacity="0.16" stroke="url(#premier_light_main)" stroke-width="3.8" stroke-linejoin="round"/>
+    <path d="M27.5 25H50C58.8 25 65 30.9 65 39.2C65 47.5 58.8 53.4 50 53.4H38.5V69H27.5V25ZM38.5 34.6V43.8H49C52.5 43.8 55 41.9 55 39.2C55 36.5 52.5 34.6 49 34.6H38.5Z" fill="url(#premier_light_main)"/>
+    <path d="M43 59L60.5 47L53 69H43V59Z" fill="url(#premier_light_sub)"/>
+    <circle cx="59.5" cy="24" r="3.6" fill="#22E6B8"/>
+  </g>
+  <!-- PREMIER Geometric Wordmark (Light Text for Dark Theme) -->
+  <text x="94" y="61" fill="#F8FAFC" font-family="'Inter', 'SF Pro Display', 'Montserrat', 'Helvetica Neue', Arial, sans-serif" font-size="42" font-weight="900" letter-spacing="2.5">PREMIER</text>
+  <circle cx="344" cy="30" r="4.5" fill="url(#premier_light_main)"/>
+</svg>

@@ -28,7 +28,7 @@ const STATUS: Record<number, { l: string; c: string }> = {
 };
 
 export default function PerpPositions() {
-  const { data, total, pageNo, pageSize, loading, setPageNo, setPageSize, setExtraParams } =
+  const { data, total, pageNo, pageSize, loading, setPageNo, setPageSize, setExtraParams, reload } =
     usePage<PerpPos>('/admin/trade/perp/position/page');
   const [searchParams] = useSearchParams();
   const [userId, setUserId] = useState<number | undefined>(searchParams.get('userId') ? Number(searchParams.get('userId')) : undefined);
@@ -63,6 +63,7 @@ export default function PerpPositions() {
         });
         message.success('操作成功');
         setExtraParams({ userId, status });
+        reload();
       },
     });
   };

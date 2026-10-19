@@ -1,0 +1,51 @@
+# 允许 Google / Bing 等主流搜索引擎收录前台公开页面，提升品牌词排名第一
+User-agent: Googlebot
+Allow: /
+Disallow: /admin/
+Disallow: /api/
+Disallow: /assets/
+Disallow: /profile/
+
+User-agent: Bingbot
+Allow: /
+Disallow: /admin/
+Disallow: /api/
+Disallow: /assets/
+Disallow: /profile/
+
+# 拦截恶意扒站工具、代码扫描器与第三方爬虫
+User-agent: HTTrack
+Disallow: /
+
+User-agent: WebCopier
+Disallow: /
+
+User-agent: Scrapy
+Disallow: /
+
+User-agent: sqlmap
+Disallow: /
+
+User-agent: Nuclei
+Disallow: /
+
+User-agent: AhrefsBot
+Disallow: /
+
+User-agent: SemrushBot
+Disallow: /
+
+User-agent: MJ12bot
+Disallow: /
+
+User-agent: DotBot
+Disallow: /
+
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /api/
+Disallow: /assets/
+Disallow: /profile/
+
+Sitemap: /sitemap.xml

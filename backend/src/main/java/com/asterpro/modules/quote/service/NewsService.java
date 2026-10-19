@@ -3,6 +3,7 @@ package com.asterpro.modules.quote.service;
 import com.asterpro.modules.quote.entity.News;
 import com.asterpro.modules.quote.mapper.NewsMapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
 import org.jsoup.Jsoup;
@@ -41,8 +42,11 @@ public class NewsService {
                 .eq(News::getPublished, 1)
                 .last("LIMIT 1"));
         if (news != null) {
-            news.setViewCount((news.getViewCount() == null ? 0 : news.getViewCount()) + 1);
-            mapper.updateById(news);
+            int nextViews = (news.getViewCount() == null ? 0 : news.getViewCount()) + 1;
+            news.setViewCount(nextViews);
+            mapper.update(null, new LambdaUpdateWrapper<News>()
+                    .eq(News::getId, id)
+                    .setSql("view_count = IFNULL(view_count, 0) + 1"));
             news.setContent(stripLinks(news.getContent()));
         }
         return news;

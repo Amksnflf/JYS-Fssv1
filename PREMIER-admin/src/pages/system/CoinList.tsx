@@ -3,6 +3,7 @@ import { App, Button, Form, Input, InputNumber, Modal, Popconfirm, Select, Space
 import type { UploadProps } from 'antd';
 import { UploadOutlined } from '@ant-design/icons';
 import http from '@/api/http';
+import { compressImageFile } from '@/utils/url';
 
 interface Coin {
   id?: number;
@@ -140,11 +141,12 @@ export default function CoinList() {
   }, [data.length, pageNo, pageSize]);
 
   const handleLogoUpload: UploadProps['customRequest'] = async (options) => {
-    const formData = new FormData();
-    formData.append('file', options.file as Blob);
-    formData.append('biz', 'coin');
     setUploading(true);
     try {
+      const compressed = await compressImageFile(options.file as Blob);
+      const formData = new FormData();
+      formData.append('file', compressed);
+      formData.append('biz', 'coin');
       const result = await http.post<UploadResult, UploadResult>('/admin/upload/image', formData);
       form.setFieldsValue({ logo: resolveUploadedLogo(result), logoStatus: 1 });
       message.success('图片上传成功');

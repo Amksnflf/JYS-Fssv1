@@ -45,6 +45,7 @@ public class PerpService {
     private final QuoteOffsetService offsetService;
     private final ApplicationEventPublisher eventPublisher;
 
+    @Transactional
     public PerpOrder open(Long userId, String symbolCode, int side, int orderType, int marginMode,
                           int leverage, BigDecimal price, BigDecimal amount,
                           BigDecimal takeProfit, BigDecimal stopLoss) {
@@ -103,7 +104,12 @@ public class PerpService {
                 if (slippage.compareTo(BigDecimal.valueOf(0.05)) > 0) {
                     throw new BizException("Limit price deviates more than 5% from market price, please adjust price"); // 限价偏离市价超过 5%，请调整价格
                 }
-                dealPrice = price.setScale(pricePrecision, RoundingMode.HALF_UP);
+                boolean marketable = (side == PerpOrder.SIDE_OPEN_LONG && price.compareTo(currentPrice) >= 0)
+                        || (side == PerpOrder.SIDE_OPEN_SHORT && price.compareTo(currentPrice) <= 0);
+                if (!marketable) {
+                    throw new BizException("Limit price has not reached current market price"); // 限价尚未触及当前市价
+                }
+                dealPrice = currentPrice;
             }
 
             int posSide = side == PerpOrder.SIDE_OPEN_LONG ? PerpPosition.SIDE_LONG : PerpPosition.SIDE_SHORT;
@@ -140,11 +146,18 @@ public class PerpService {
                 BigDecimal newOpenPrice = sameSide.getAmount().multiply(sameSide.getOpenPrice())
                         .add(amount.multiply(dealPrice))
                         .divide(newAmount, pricePrecision, RoundingMode.HALF_UP);
+                BigDecimal newMargin = sameSide.getMargin().add(margin);
+                BigDecimal totalNotionalQuote = newAmount.multiply(newOpenPrice);
+                BigDecimal totalNotionalSettlement = settlementService.convertQuoteToSettlement(symbolEntity, totalNotionalQuote);
+                int effectiveLeverage = newMargin.signum() > 0
+                        ? Math.max(1, totalNotionalSettlement.divide(newMargin, 0, RoundingMode.HALF_UP).intValue())
+                        : leverage;
+                effectiveLeverage = Math.min(effectiveLeverage, maxLeverage);
                 sameSide.setAmount(newAmount);
                 sameSide.setOpenPrice(newOpenPrice);
-                sameSide.setMargin(sameSide.getMargin().add(margin));
-                sameSide.setLeverage(leverage);
-                sameSide.setLiqPrice(calcLiqPrice(newOpenPrice, leverage, posSide));
+                sameSide.setMargin(newMargin);
+                sameSide.setLeverage(effectiveLeverage);
+                sameSide.setLiqPrice(calcLiqPrice(newOpenPrice, effectiveLeverage, posSide));
                 if (takeProfit != null) {
                     sameSide.setTakeProfitPrice(takeProfit);
                 }

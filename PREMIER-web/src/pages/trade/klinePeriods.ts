@@ -13,7 +13,7 @@ export type KlinePeriod = (typeof KLINE_PERIODS)[number]['v'];
 
 export function normalizeKlinePeriodForApi(period: string): string {
   if (period === '1m-line') return '1m';
-  if (period === '1M') return '1mo';
+  if (period === '1mo') return '1M';
   return period;
 }
 
@@ -37,6 +37,7 @@ export function periodSeconds(period: string): number {
       return 24 * 60 * 60;
     case '1w':
       return 7 * 24 * 60 * 60;
+    case '1M':
     case '1mo':
       return 30 * 24 * 60 * 60;
     default:

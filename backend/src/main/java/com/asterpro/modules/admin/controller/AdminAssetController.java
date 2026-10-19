@@ -219,15 +219,32 @@ public class AdminAssetController {
 
     @GetMapping("/udun-config")
     public R<UdunRuntimeConfig> udunConfig() {
-        return R.ok(udunConfigService.current());
+        UdunRuntimeConfig cfg = udunConfigService.current();
+        cfg.setSignKey(maskSecret(cfg.getSignKey()));
+        return R.ok(cfg);
     }
 
     @PostMapping("/udun-config/save")
     public R<UdunRuntimeConfig> saveUdunConfig(@RequestBody UdunRuntimeConfig dto) {
+        if (dto.getSignKey() == null || dto.getSignKey().isBlank() || dto.getSignKey().contains("***")) {
+            dto.setSignKey(udunConfigService.current().getSignKey());
+        }
         UdunRuntimeConfig saved = udunConfigService.save(dto);
         logService.log(authService.currentAdminId(), "asset", "udun_config_save",
                 "udun_config", "udun", "enabled=" + saved.getEnabled());
+        saved.setSignKey(maskSecret(saved.getSignKey()));
         return R.ok(saved);
+    }
+
+    private String maskSecret(String secret) {
+        if (secret == null || secret.isBlank()) {
+            return secret;
+        }
+        String s = secret.trim();
+        if (s.length() <= 4) {
+            return "******";
+        }
+        return s.substring(0, 2) + "******" + s.substring(s.length() - 2);
     }
 
     @GetMapping("/transfer/page")

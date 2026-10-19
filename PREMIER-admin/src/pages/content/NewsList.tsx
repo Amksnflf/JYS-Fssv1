@@ -5,6 +5,7 @@ import type { UploadProps } from 'antd';
 import { UploadOutlined } from '@ant-design/icons';
 import http from '@/api/http';
 import { usePage } from '@/utils/usePage';
+import { compressImageFile } from '@/utils/url';
 import { brandName } from '@/brand';
 
 interface NewsRecord {
@@ -141,11 +142,12 @@ export default function NewsListPage() {
   const handleImageUpload =
     (field: 'cover' | 'authorAvatar'): UploadProps['customRequest'] =>
     async (options) => {
-      const formData = new FormData();
-      formData.append('file', options.file as Blob);
-      formData.append('biz', 'news');
       setUploadingField(field);
       try {
+        const compressed = await compressImageFile(options.file as Blob);
+        const formData = new FormData();
+        formData.append('file', compressed);
+        formData.append('biz', 'news');
         const result = await http.post<UploadResult, UploadResult>('/admin/upload/image', formData);
         form.setFieldsValue({ [field]: resolveUploadedUrl(result) } as Partial<NewsFormValues>);
         message.success(field === 'cover' ? '封面上传成功' : '头像上传成功');
@@ -444,12 +446,12 @@ function htmlToPlainText(value?: string) {
   if (!html) {
     return '';
   }
-  const container = document.createElement('div');
-  container.innerHTML = html;
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  const container = doc.body;
   container.querySelectorAll('br').forEach((node) => node.replaceWith('\n'));
   container
     .querySelectorAll('p, div, section, article, li, blockquote, h1, h2, h3, h4, figure, figcaption, tr')
-    .forEach((node) => node.appendChild(document.createTextNode('\n')));
+    .forEach((node) => node.appendChild(doc.createTextNode('\n')));
   return (container.textContent || '')
     .replace(/\u00a0/g, ' ')
     .replace(/\n{3,}/g, '\n\n')

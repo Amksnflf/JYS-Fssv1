@@ -34,7 +34,7 @@ public class UserService {
         UserInfoVO vo = new UserInfoVO();
         vo.setUserId(u.getId());
         vo.setUid(u.getUid());
-        vo.setAccount(u.getAccount());
+        vo.setAccount(maskAccount(u.getAccount()));
         vo.setNickname(u.getNickname());
         vo.setAvatar(u.getAvatar());
         vo.setCountryCode(u.getCountryCode());
@@ -64,15 +64,25 @@ public class UserService {
         userMapper.updateById(u);
     }
 
+    private String maskAccount(String account) {
+        if (account == null || account.isBlank()) return account;
+        if (account.contains("@")) return maskEmail(account);
+        if (account.matches("^\\+?\\d{6,}$")) return maskPhone(account);
+        return account;
+    }
+
     private String maskPhone(String phone) {
-        if (phone == null || phone.length() < 7) return phone;
-        return phone.substring(0, 3) + "****" + phone.substring(phone.length() - 3);
+        if (phone == null || phone.isBlank()) return phone;
+        if (phone.length() < 7) {
+            return phone.length() <= 2 ? phone.charAt(0) + "***" : phone.substring(0, 2) + "****";
+        }
+        return phone.substring(0, 3) + "****" + phone.substring(phone.length() - 4);
     }
 
     private String maskEmail(String email) {
         if (email == null) return null;
         int at = email.indexOf('@');
-        if (at <= 1) return email;
+        if (at <= 0) return email;
         String prefix = email.substring(0, at);
         String suffix = email.substring(at);
         if (prefix.length() <= 2) return prefix.charAt(0) + "***" + suffix;

@@ -12,4 +12,8 @@ public class UdunRuntimeConfig {
     private Integer addressExpireMinutes;
     private Integer connectTimeoutSeconds;
     private Integer readTimeoutSeconds;
+
+    public boolean isEnabled() {
+        return Boolean.TRUE.equals(enabled);
+    }
 }

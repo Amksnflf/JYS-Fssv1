@@ -43,6 +43,7 @@ import { useCoinLogoMap } from '@/hooks/useCoinLogoMap';
 import { useSupportEntryNavigation } from '@/hooks/useSupportEntryNavigation';
 import { useWalletModal } from '@/hooks/useWalletModal';
 import { brandLockupDarkUrl, brandName, brandNameUpper } from '@/brand';
+import { maskSensitiveText } from '@/utils/secureStorage';
 
 const MARKET_CATS = ['catCrypto', 'catForex', 'catMetal', 'catCommodity', 'catIndex', 'catStock'] as const;
 const HOME_CATS = ['favorite', ...MARKET_CATS] as const;
@@ -552,7 +553,7 @@ export default function HomePage() {
                   {token ? t('home.greeting', '欢迎回来') : t('common.welcome', '欢迎体验')}
                 </div>
                 <div className="mt-1 text-[14px] font-bold text-text truncate max-w-[130px] leading-none">
-                  {token ? (user?.nickname || user?.phone || user?.email || 'Trader') : brandName}
+                  {token ? (user?.nickname || maskSensitiveText(user?.phone) || maskSensitiveText(user?.email) || 'Trader') : brandName}
                 </div>
               </div>
             </Link>
