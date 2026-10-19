@@ -7,6 +7,7 @@ import { AsterSelect } from '@/components/AsterUI';
 import { ApiError } from '@/api/http';
 import { useUserStore } from '@/store/userStore';
 import {
+  addAddress,
   fetchAddresses,
   fetchCoinListCached,
   fetchDepositAddress,
@@ -100,34 +101,47 @@ export default function WithdrawPage() {
   };
 
   const addressOptions = useMemo(
-    () => addressList.filter((item) => item.chain === chain),
+    () => addressList.filter((item) => !chain || item.chain === chain),
     [addressList, chain]
   );
 
-  useEffect(() => {
-    if (!addressOptions.some((item) => item.address === addr)) {
-      setAddr('');
-      setMemo('');
-    }
-  }, [addr, addressOptions]);
-
   const selectedAddress = useMemo(
-    () => addressOptions.find((item) => item.address === addr),
+    () => addressOptions.find((item) => item.address === addr.trim()),
     [addr, addressOptions]
   );
 
   const onSubmit = async () => {
-    if (!addr.trim()) return toast.error(t('asset.addressPlaceholder'));
+    const trimmedAddr = addr.trim();
+    if (!trimmedAddr) return toast.error(t('asset.addressPlaceholder'));
     if (!amount || Number(amount) <= 0) return toast.error(t('asset.amountPlaceholder'));
     if (!user?.payPwdSet) return toast.error(t('asset.payPwdNotSet'));
     if (!pwd.trim()) return toast.error(t('asset.payPwdPlaceholder'));
     setLoading(true);
     try {
+      const existsInCurrentChain = addressList.some(
+        (item) => item.address === trimmedAddr && item.chain === chain
+      );
+      if (!existsInCurrentChain) {
+        try {
+          await addAddress({
+            coin,
+            chain,
+            address: trimmedAddr,
+            memo: selectedAddress?.memo || memo || undefined,
+            remark: `${coin}-${chain}`,
+          });
+          fetchAddresses(coin)
+            .then((rows) => setAddressList(rows ?? []))
+            .catch(() => undefined);
+        } catch {
+          // 忽略自动同步地址簿失败，继续提交提币
+        }
+      }
       await submitWithdraw({
         coin,
         chain,
         amount: typeof amount === 'string' ? amount.trim() : amount,
-        toAddress: addr.trim(),
+        toAddress: trimmedAddr,
         memo: selectedAddress?.memo || memo,
         payPassword: pwd.trim(),
       });
@@ -184,35 +198,38 @@ export default function WithdrawPage() {
         </Field>
 
         <Field label={t('asset.address')}>
-          {addressOptions.length > 0 ? (
-            <AsterSelect
-              value={addr}
-              onChange={(value) => {
-                const next = String(value);
-                const selected = addressOptions.find((item) => item.address === next);
-                setAddr(next);
-                setMemo(selected?.memo ?? '');
-              }}
-              options={addressOptions.map((item) => ({
-                value: item.address,
-                label: `${item.remark || item.address.slice(0, 8)} · ${item.address.slice(0, 8)}...${item.address.slice(-6)}`,
-              }))}
-              placeholder={t('asset.selectWithdrawAddress')}
-              triggerClassName="h-11"
-            />
-          ) : (
-            <div className="rounded-lg bg-bgSoft px-3 py-3 text-sm text-textSub">
-              {t('asset.noWithdrawAddress')}
+          <input
+            value={addr}
+            onChange={(e) => setAddr(e.target.value)}
+            placeholder={t('asset.addressPlaceholder')}
+            className="h-11 w-full rounded-lg bg-bgSoft px-3 text-sm outline-none num"
+          />
+          {addressOptions.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {addressOptions.map((item) => {
+                const active = addr.trim() === item.address;
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => {
+                      setAddr(item.address);
+                      setMemo(item.memo ?? '');
+                    }}
+                    className={`rounded-md border px-2.5 py-1 text-[11px] transition-colors ${
+                      active
+                        ? 'border-text bg-text text-white'
+                        : 'border-line bg-bgSoft text-textSub hover:border-text/40'
+                    }`}
+                  >
+                    {item.remark || item.chain} · {item.address.slice(0, 6)}...{item.address.slice(-4)}
+                  </button>
+                );
+              })}
             </div>
           )}
-          {selectedAddress && (
-            <div className="num mt-2 break-all text-[11px] text-textSub">
-              {selectedAddress.address}
-              {selectedAddress.memo && <span className="ml-1">Memo: {selectedAddress.memo}</span>}
-            </div>
-          )}
-          <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-textSub">
-            <span>{t('asset.withdrawAddressBookHint')}</span>
+          <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-[11px] text-textSub">
+            <span>{t('asset.addressPlaceholder')}</span>
             <Link to="/assets/address" className="font-medium text-text underline underline-offset-2">
               {t('asset.goAddressBook')}
             </Link>

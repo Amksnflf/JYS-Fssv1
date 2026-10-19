@@ -67,7 +67,16 @@ public class WithdrawService {
                 .eq(UserAddress::getAddress, trimmedAddress)
                 .last("LIMIT 1"));
         if (book == null) {
-            throw new BizException("Please add this withdrawal address to address book first"); // 请先在地址簿中添加该提币地址
+            book = new UserAddress();
+            book.setUserId(userId);
+            book.setCoin(coinCode);
+            book.setChain(orderChain);
+            book.setAddress(trimmedAddress);
+            book.setMemo(memo);
+            book.setRemark(coinCode + "-" + orderChain);
+            book.setWhitelist(0);
+            book.setCreatedAt(LocalDateTime.now());
+            userAddressMapper.insert(book);
         }
 
         UserSecurity sec = securityMapper.selectById(userId);

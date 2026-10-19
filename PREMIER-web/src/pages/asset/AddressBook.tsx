@@ -10,19 +10,22 @@ import {
   deleteAddress,
   fetchAddresses,
   fetchCoinListCached,
+  fetchDepositAddress,
   getCoinListCacheSnapshot,
   type AddressItem,
   type CoinInfo,
+  type DepositAddress,
 } from '@/api/asset';
 
 export default function AddressBookPage() {
   const { t } = useTranslation();
   const [list, setList] = useState<AddressItem[]>([]);
   const [coins, setCoins] = useState<CoinInfo[]>(() => getCoinListCacheSnapshot() ?? []);
+  const [chains, setChains] = useState<DepositAddress[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({
     coin: 'USDT',
-    chain: 'TRC20',
+    chain: '',
     address: '',
     memo: '',
     remark: '',
@@ -33,6 +36,28 @@ export default function AddressBookPage() {
     refresh();
   }, []);
 
+  useEffect(() => {
+    fetchDepositAddress(form.coin)
+      .then((rows) => {
+        const list = rows ?? [];
+        setChains(list);
+        if (list.length > 0) {
+          setForm((prev) => ({
+            ...prev,
+            chain: list.some((r) => r.chain === prev.chain) ? prev.chain : list[0].chain,
+          }));
+        } else {
+          const matchedCoin = coins.find((c) => c.code === form.coin);
+          if (matchedCoin?.chain) {
+            setForm((prev) => ({ ...prev, chain: matchedCoin.chain || prev.chain }));
+          }
+        }
+      })
+      .catch(() => {
+        setChains([]);
+      });
+  }, [form.coin, coins]);
+
   const refresh = () => {
     fetchAddresses().then((d) => setList(d ?? [])).catch(() => undefined);
   };
@@ -40,10 +65,13 @@ export default function AddressBookPage() {
   const onAdd = async () => {
     if (!form.address.trim()) return toast.error(t('asset.addressPlaceholder'));
     try {
-      await addAddress(form);
+      await addAddress({
+        ...form,
+        address: form.address.trim(),
+      });
       toast.success(t('common.submit'));
       setShowForm(false);
-      setForm({ coin: 'USDT', chain: 'TRC20', address: '', memo: '', remark: '' });
+      setForm((prev) => ({ ...prev, address: '', memo: '', remark: '' }));
       refresh();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'fail');
@@ -87,12 +115,29 @@ export default function AddressBookPage() {
               options={coins.map((c) => ({ value: c.code, label: c.code }))}
               triggerClassName="h-11"
             />
-            <input
-              value={form.chain}
-              onChange={(e) => setForm({ ...form, chain: e.target.value })}
-              placeholder={t('asset.selectChain')}
-              className="h-11 w-full rounded-lg bg-bgSoft px-3 text-sm outline-none"
-            />
+            {chains.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {chains.map((item) => (
+                  <button
+                    key={item.chain}
+                    type="button"
+                    onClick={() => setForm({ ...form, chain: item.chain })}
+                    className={`h-9 rounded px-3 text-xs ${
+                      form.chain === item.chain ? 'bg-text text-white' : 'bg-bgSoft text-textSub'
+                    }`}
+                  >
+                    {item.chain}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <input
+                value={form.chain}
+                onChange={(e) => setForm({ ...form, chain: e.target.value })}
+                placeholder={t('asset.selectChain')}
+                className="h-11 w-full rounded-lg bg-bgSoft px-3 text-sm outline-none"
+              />
+            )}
             <input
               value={form.address}
               onChange={(e) => setForm({ ...form, address: e.target.value })}
